@@ -25,7 +25,7 @@ This repository ships the compiled binaries, the exact configuration that produc
 | Current build | `Ender3S1-F1-v2` - 2026-07-30 - md5 `6e11c30095187fd50a62fa75904379f0` |
 | Flash / RAM | 232,344 / 233,472 B (99.5 %, 1,128 B free) and 28,064 / 49,152 B (57.1 %) |
 | Screen | DACAI 4.3&quot;, official V3.1.9 OS + matching asset set - recovered from a brick |
-| Status | Running on the machine, calibrated, in daily use |
+| Status | Running on the machine. `M115` reported `Ender3S1-F1-v2 (Jul 30 2026 16:04:49)` on 2026-09-21 and again on 2026-10-01 - the exact string compiled into the shipped image |
 
 ## Why it exists
 
@@ -189,6 +189,7 @@ A firmware repository that says everything works is not telling you anything. Th
 * **cannot** be checked bit-for-bit after a rebuild - the image embeds its build timestamp. Size and `M115` are the comparable properties.
 * **does not** treat cable flashing as proven here: binary file transfer is compiled in and reports the capability, but every flash in this project went over SD. The SD path is the one with a track record.
 * **documents** the BOOT0 + `stm32flash` recovery path but has never needed to use it.
+* **was** verified as the running firmware, not just as a file: the `M115` answer captured on 2026-09-21 and 2026-10-01 matches the `FIRMWARE_NAME` string inside [firmware/Ender3S1-F1-v2-20260730.bin](firmware/Ender3S1-F1-v2-20260730.bin) character for character, including the build stamp and UUID. The flash itself happened on 2026-07-30, before the retained session history starts, so it is evidenced by the artifacts written that afternoon rather than by a saved console transcript.
 * **ships** machine-specific calibration values as a record, not as a recommendation. Copying `M205 J0.02` or `Z-3.10` to another printer without measuring is guesswork.
 * **treats** the upstream issue workaround in `0002` as a workaround. A future mriscoc release may make it unnecessary.
 
