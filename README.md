@@ -176,6 +176,12 @@ What is checked mechanically, on every push and locally with `make verify`:
 | Relative-link check over all Markdown | the documentation does not rot |
 | Full rebuild in CI | the pinned upstream commits plus the committed configuration still compile |
 
+### Measured reproducibility
+
+On 2026-10-27 a fresh ``bootstrap.sh`` + ``build.sh`` from the pinned commits produced an image that differs from [firmware/Ender3S1-F1-v2-20260730.bin](firmware/Ender3S1-F1-v2-20260730.bin) in **16 bytes**. Both clusters lie inside the embedded build stamp (`Jul 30 2026 16:04:49` became `Oct 27 2026 14:41:40`). Everything else is identical: file size 232,972 B, flash footprint 232,344 B, RAM 28,064 B and reset vector `0x080092C5`.
+
+That is the useful definition of reproducible for this build - the source and configuration reproduce the image, and only the timestamp compiled into it moves.
+
 ### What is deliberately not claimed
 
 A firmware repository that says everything works is not telling you anything. This one:

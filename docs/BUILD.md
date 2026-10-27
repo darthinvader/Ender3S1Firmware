@@ -261,6 +261,8 @@ A manual check of the vector table reads the first two words of the `.bin`: the 
 
 ### Reproducibility
 
+Measured on 2026-10-27: bootstrap plus build from the pinned commits, compared against the published image, differed in 16 bytes only - the two embedded build-stamp strings (`Jul 30 2026 16:04:49` versus `Oct 27 2026 14:41:40`). File size (232972 B), flash usage (232344 B), RAM usage (28064 B) and the reset vector (`0x080092C5`) matched exactly.
+
 Two builds of the same source and configuration are never byte-identical. [Version.h](../configs/Ender3S1-F1-v2/Version.h) sets `STRING_DISTRIBUTION_DATE` to `__DATE__` and `STRING_DISTRIBUTION_TIME` to `__TIME__`, so the build timestamp is compiled into the image. Compare flash usage (232344 B, 99.5%) and the `M115` output instead of hashes. A hash comparison is only meaningful for the exact published file.
 
 ## Why the configuration files are committed instead of only a recipe
