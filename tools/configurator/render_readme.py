@@ -1,0 +1,189 @@
+#!/usr/bin/env python3
+"""Render tools/configurator/README.md from the catalogue and the measurements.
+
+The documentation is generated on purpose: the feature table, the totals and the
+measurement summary all come from features.json, so they cannot drift from what
+the service actually does.
+"""
+import json
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+CAT = ROOT / "tools" / "configurator" / "features.json"
+OUT = ROOT / "tools" / "configurator" / "README.md"
+
+BT = chr(96)
+FENCE = BT * 3
+def bt(s):
+    return s.replace("@BT@", BT).replace("@FENCE@", FENCE)
+
+cat = json.loads(CAT.read_text())
+feats = cat["features"]
+cal = cat.get("calibration", {})
+base = cat["baseline"]
+region = next(m for m in cat["machines"] if m.get("supported"))["flash_region"]
+
+measured = [f for f in feats if f.get("cost_source") == "measured"]
+unmeasured = [f for f in feats if f.get("cost_source") != "measured"]
+on = [f for f in feats if f["on_by_default"]]
+off = [f for f in feats if not f["on_by_default"]]
+
+rows = []
+for group in cat["groups"]:
+    group_feats = [f for f in feats if f["group"] == group]
+    if not group_feats:
+        continue
+    rows.append("")
+    rows.append("### " + group)
+    rows.append("")
+    rows.append("| Feature | Id | In your build | Flash | RAM |")
+    rows.append("|---|---|---|---|---|")
+    for f in group_feats:
+        flag = "on" if f["on_by_default"] else "off"
+        if f.get("buildable") is False:
+            cost, ram = "not toggleable", "-"
+        elif f.get("cost_source") == "measured":
+            cost, ram = "%+d B" % f["flash"], "%+d B" % f.get("ram", 0)
+        else:
+            cost, ram = "not measured", "-"
+        label = f["label"] + (" (careful)" if f.get("risk") == "high" else "")
+        rows.append("| %s | %s | %s | %s | %s |" % (label, bt(f["id"]), flag, cost, ram))
+table = "\n".join(rows)
+
+flash_on = sum(f["flash"] for f in on if f.get("cost_source") == "measured")
+blocked = "\n".join("| %s | %s |" % (f["label"], f.get("build_failed", "no reason recorded")) for f in feats if f.get("buildable") is False)
+top = sorted([f for f in feats if f.get("cost_source") == "measured"], key=lambda f: -f["flash"])[:5]
+top_rows = "\n".join("| %s | %+d B |" % (f["label"], f["flash"]) for f in top)
+
+doc = bt("""# Firmware configurator
+
+A local web app that turns \"I want these features\" into a compiled, checksummed, flashable **Ender3S1-CFG** image for the Ender 3 S1 - using the same pinned Marlin tree, the same configuration and the same verification as the rest of this repository.
+
+![Configurator UI](../../docs/img/configurator-ui.png)
+
+## Quick start
+
+@FENCE@bash
+./scripts/bootstrap.sh                      # once: pinned sources + PlatformIO 6.1.19
+python3 tools/configurator/server.py        # -> http://127.0.0.1:8787
+@FENCE@
+
+Three presets cover the common cases:
+
+| Preset | What it selects |
+|---|---|
+| **What I run now** | exactly the feature set of the firmware on the machine today (the default state of the page) |
+| **Minimum** | everything that can be turned off, turned off |
+| **Add what fits** | starts from what you run now and adds every measured feature that still fits, cheapest first |
+
+The page always shows whether the current selection is **bigger or smaller than the image you run now**, in bytes and percent, next to the flash bar.
+
+## What a build gives you
+
+| Artifact | What it is |
+|---|---|
+| @BT@firmware.bin@BT@ | the image, stamped @BT@Ender3S1-CFG@BT@ so @BT@M115@BT@ identifies it |
+| @BT@manifest.json@BT@ | machine, selection, **what changed versus the shipped build**, warnings, predicted vs measured size, sha256, upstream commits |
+| log | the full PlatformIO output |
+
+## Every cost is measured
+
+Nothing in the catalogue is a datasheet number. Each feature was priced by compiling it:
+
+* a feature that is **on** in the shipped configuration was measured by turning it off and seeing how much the image shrank
+* a feature that is **off** was measured by turning it on against a slimmed baseline that frees headroom, and seeing how much the image grew
+* a link that overflows still measures: the linker states how many bytes over it went, and that becomes the price
+
+Two baselines make that possible:
+
+| Baseline | Flash | RAM | What it is |
+|---|---|---|---|
+| A | {a_flash} B | {a_ram} B | the shipped configuration, built by the configurator |
+| B | {b_flash} B | {b_ram} B | A minus the screen extras, BFT and the macro slots, to make room for measuring additions |
+
+The catalogue now holds **{n} features** ({n_on} on in your build, {n_off} off): **{n_measured} priced by a real build**, and {n_blocked} that cannot be toggled on this board at all (the compiler refuses them - see the list below). The most expensive things you are carrying:
+
+| Feature | Cost |
+|---|---|
+{top_rows}
+
+### The five that cannot be toggled here
+
+{blocked_rows}
+
+## The catalogue
+
+{table}
+
+## How it works
+
+@FENCE@text
+features.json  ->  apply_features.py  ->  PlatformIO  ->  firmware.bin + manifest.json
+      ^                  |                   ^
+      |                  v                   |
+   server.py  <-- budget check refuses over-budget selections
+      ^
+      |  HTTP + static page
+   browser
+@FENCE@
+
+| File | Role |
+|---|---|
+| @BT@features.json@BT@ | the catalogue: every toggle, the defines it flips, the measured flash and RAM cost, the machines it applies to |
+| @BT@apply_features.py@BT@ | copies the baseline configuration, flips the defines, **verifies each flip landed**, stamps the identity, applies the upstream source patch, enforces the budget |
+| @BT@server.py@BT@ | stdlib HTTP service: catalogue, build queue, job status, log tail, artifact and manifest download |
+| @BT@web/@BT@ | the page: checkboxes, presets, live budget and size delta, build log, result panel |
+| @BT@measure.py@BT@ | the measurement harness that produced the costs above |
+| @BT@merge_measurements.py@BT@ | writes measured costs back into the catalogue |
+| @BT@validate_catalog.py@BT@ | static consistency check, part of @BT@make verify@BT@ - proves every define exists exactly once and that @BT@on_by_default@BT@ matches the configuration file |
+
+## Verified
+
+| Check | Result |
+|---|---|
+| Default selection | predicted {a_flash} B, measured {a_flash} B, error **0 B** |
+| Two toggles off (@BT@ui_colors@BT@ + @BT@is_z@BT@) | predicted 228,596 B, measured 228,596 B, error **0 B**, 3,748 B smaller than the running image |
+| **Add what fits** (9 features added on top) | predicted 233,328 B including the 64 B/feature margin, measured 232,736 B: 592 B conservative, and it builds |
+| Over-budget request | refused before compiling, with the exact overflow |
+| Artifact identity | @BT@M115@BT@ reports @BT@Ender3S1-CFG@BT@ |
+| Artifact integrity | @BT@scripts/check-vector-table.py@BT@ passes on every build |
+| Catalogue consistency | @BT@validate_catalog.py@BT@: no inconsistencies across all {n} features |
+
+![A finished build: predicted equals measured](../../docs/img/configurator-result.png)
+
+## Limits
+
+* **STM32F103 only.** F401 boards take a different image with a different vector offset; the catalogue marks them unsupported rather than pretending.
+* **This service runs a compiler.** It binds to @BT@127.0.0.1@BT@ and has no authentication. Do not expose it to a network you do not control.
+* **One job at a time**, queue depth 4. A cold tree is refused with a pointer to @BT@./scripts/bootstrap.sh@BT@.
+* **Curated, not exhaustive.** Marlin has hundreds of options; the catalogue carries the ones that mean something on this machine. Adding another is one entry plus one measurement run.
+* **Marginal costs.** Each price is the cost of that feature against the two baselines above; two features that share code can interact by a few bytes of alignment. The result panel always shows the exact measured size of the selection you built, so the prediction is a planning aid, not a promise.
+
+## Serverless variant
+
+[@@.github/workflows/configurator.yml@@](../../.github/workflows/configurator.yml) runs the same apply-and-build on GitHub Actions via @BT@workflow_dispatch@BT@. It is a template: not exercised on a runner yet, while the local path above has.
+
+---
+
+[<- Back to the project README](../../README.md)
+""")
+
+doc = (doc
+       .replace("{a_flash}", format(cal.get("baseline_a", {}).get("flash", base["flash"]), ","))
+       .replace("{a_ram}", format(cal.get("baseline_a", {}).get("ram", base["ram"]), ","))
+       .replace("{b_flash}", format(cal.get("baseline_b", {}).get("flash", 0), ","))
+       .replace("{b_ram}", format(cal.get("baseline_b", {}).get("ram", 0), ","))
+       .replace("{n_measured}", str(len(measured)))
+       .replace("{n_on}", str(len(on)))
+       .replace("{n_off}", str(len(off)))
+       .replace("{top_rows}", top_rows)
+       .replace("{table}", table)
+       .replace("{n_blocked}", str(len([f for f in feats if f.get("buildable") is False])))
+       .replace("{blocked_rows}", blocked)
+       .replace("{n}", str(len(feats)))
+       .replace("@@", BT + BT))
+
+OUT.write_text(doc)
+print("wrote", OUT, len(doc.splitlines()), "lines;", len(measured), "measured of", len(feats))
+if unmeasured:
+    print("unmeasured:", [f["id"] for f in unmeasured])

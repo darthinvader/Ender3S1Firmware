@@ -137,6 +137,17 @@ def main(argv) -> int:
     state = dict(default_on)
     state.update(overrides)
 
+    # 2b. refuse selections that contain a declared conflict
+    problems = []
+    for fid, want in state.items():
+        if not want:
+            continue
+        for other in features[fid].get("conflicts", []):
+            if state.get(other):
+                problems.append("%s conflicts with %s" % (fid, other))
+    if problems:
+        die("selection conflicts: " + "; ".join(sorted(set(problems))))
+
     # 3. flip and verify
     applied = []
     for fid, feat in features.items():
@@ -185,6 +196,9 @@ def main(argv) -> int:
         sign = 1 if want else -1
         pred_flash += sign * features[fid]["flash"]
         pred_ram += sign * features[fid]["ram"]
+    added = [fid for fid, want in state.items() if want and not default_on[fid]]
+    margin = base.get("add_margin_per_feature", 0) * len(added)
+    pred_flash += margin
     region = machine["flash_region"]
     if pred_flash > region:
         die("selection is %.0f bytes over the %d byte application region" % (pred_flash - region, region))

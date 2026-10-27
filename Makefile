@@ -15,6 +15,7 @@ help:
 verify:
 	./scripts/verify-artifacts.sh
 	python3 scripts/check-docs.py .
+	python3 tools/configurator/validate_catalog.py
 
 docs:
 	python3 scripts/check-docs.py .

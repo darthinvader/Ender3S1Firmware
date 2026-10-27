@@ -1,88 +1,217 @@
 # Firmware configurator
 
-A local web app that turns "I want these features" into a compiled, checksummed, flashable `Ender3S1-CFG` image for the Ender 3 S1 - using the same pinned Marlin tree, the same configuration and the same verification as the rest of this repository.
+A local web app that turns "I want these features" into a compiled, checksummed, flashable **Ender3S1-CFG** image for the Ender 3 S1 - using the same pinned Marlin tree, the same configuration and the same verification as the rest of this repository.
 
 ![Configurator UI](../../docs/img/configurator-ui.png)
-
-## Why it exists
-
-mriscoc's configurator writes `Configuration.h` for you, but it does not compile, does not tell you whether the result still fits in 233,472 bytes, and does not verify the artifact. MarlinWebBuild compiles, but only from stock example configs - there are no feature toggles. This does both, for this one machine, with the measured cost of every toggle.
 
 ## Quick start
 
 ```bash
-# once: pinned sources + PlatformIO 6.1.19 in build/
-./scripts/bootstrap.sh
-
-# run the service
-python3 tools/configurator/server.py
-# -> http://127.0.0.1:8787
+./scripts/bootstrap.sh                      # once: pinned sources + PlatformIO 6.1.19
+python3 tools/configurator/server.py        # -> http://127.0.0.1:8787
 ```
 
-Pick features, watch the flash bar, press **Build firmware**. A build takes about 20 seconds on a warm tree and produces:
+Three presets cover the common cases:
+
+| Preset | What it selects |
+|---|---|
+| **What I run now** | exactly the feature set of the firmware on the machine today (the default state of the page) |
+| **Minimum** | everything that can be turned off, turned off |
+| **Add what fits** | starts from what you run now and adds every measured feature that still fits, cheapest first |
+
+The page always shows whether the current selection is **bigger or smaller than the image you run now**, in bytes and percent, next to the flash bar.
+
+## What a build gives you
 
 | Artifact | What it is |
 |---|---|
 | `firmware.bin` | the image, stamped `Ender3S1-CFG` so `M115` identifies it |
-| `manifest.json` | machine, selection, predicted vs measured size, sha256, upstream commits |
+| `manifest.json` | machine, selection, **what changed versus the shipped build**, warnings, predicted vs measured size, sha256, upstream commits |
 | log | the full PlatformIO output |
+
+## Every cost is measured
+
+Nothing in the catalogue is a datasheet number. Each feature was priced by compiling it:
+
+* a feature that is **on** in the shipped configuration was measured by turning it off and seeing how much the image shrank
+* a feature that is **off** was measured by turning it on against a slimmed baseline that frees headroom, and seeing how much the image grew
+* a link that overflows still measures: the linker states how many bytes over it went, and that becomes the price
+
+Two baselines make that possible:
+
+| Baseline | Flash | RAM | What it is |
+|---|---|---|---|
+| A | 232,312 B | 28,064 B | the shipped configuration, built by the configurator |
+| B | 218,944 B | 25,812 B | A minus the screen extras, BFT and the macro slots, to make room for measuring additions |
+
+The catalogue now holds **70 features** (47 on in your build, 23 off): **65 priced by a real build**, and 5 that cannot be toggled on this board at all (the compiler refuses them - see the list below). The most expensive things you are carrying:
+
+| Feature | Cost |
+|---|---|
+| Cable flashing (binary file transfer) | +4688 B |
+| MPC Autotune | +4224 B |
+| Pidtempbed | +4048 B |
+| Power-loss recovery | +3920 B |
+| Arc Support | +2960 B |
+
+### The five that cannot be toggled here
+
+| Advanced Pause Feature | required by FILAMENT_RUNOUT_SCRIPT, which uses M600: it cannot be removed on its own |
+| Nozzle Park Feature | required by ADVANCED_PAUSE_FEATURE, which is enabled: it cannot be removed on its own |
+| Fan Soft Pwm | required by this board: disabling it fails the sanity check ('FAN_SOFT_PWM is required for your board') |
+| Ccloud Print Support | does not compile on this tree: the cloud path needs print-stats globals that are configured out here |
+| Sdcard Readonly | conflicts with POWER_LOSS_RECOVERY ('Either disable SDCARD_READONLY or disable POWER_LOSS_RECOVERY'); it would also need binary file transfer off |
+
+## The catalogue
+
+
+### Motion and extrusion
+
+| Feature | Id | In your build | Flash | RAM |
+|---|---|---|---|---|
+| Adaptive Step Smoothing | adaptive_step_smoothing | on | +208 B | +2756 B |
+| Advanced Pause Feature | advanced_pause_feature | on | not toggleable | - |
+| Arc Support | arc_support | on | +2960 B | +0 B |
+| Babystep Display Total | babystep_display_total | off | +72 B | +4 B |
+| Babystepping | babystepping | on | +1196 B | +8 B |
+| Bezier Curve Support | bezier_curve_support | off | +1168 B | +0 B |
+| Fan kickstart (100 ms) | fan_kickstart | on | +56 B | +4 B |
+| Filament Load Unload Gcodes | filament_load_unload_gcodes | on | +728 B | +0 B |
+| Fwretract | fwretract | on | +1856 B | +56 B |
+| Input shaping on Z | is_z | on | +1636 B | +284 B |
+| Input Shaping X | input_shaping_x | on | +1692 B | +2532 B |
+| Input Shaping Y | input_shaping_y | on | +1692 B | +2532 B |
+| Live Z from the host (M293/M294) | ep_babystep | on | +160 B | +0 B |
+| Non-linear extrusion (M592) | nle | on | +592 B | +28 B |
+| Nozzle clean (G12) | nozzle_clean | on | +1400 B | +0 B |
+| Nozzle Park Feature | nozzle_park_feature | on | not toggleable | - |
+| Skew correction (M852) | skew | on | +1568 B | +12 B |
+| Slowdown | slowdown | on | +64 B | +0 B |
+| Smooth linear advance | smooth_la | on | +1280 B | +524 B |
+
+### Leveling and probing
+
+| Feature | Id | In your build | Flash | RAM |
+|---|---|---|---|---|
+| Bed Tramming Include Center | bed_tramming_include_center | off | +40 B | +0 B |
+| Enable Leveling after G28 | enable_leveling_after_g28 | off | +8 B | +0 B |
+| Extrapolate Beyond Grid | extrapolate_beyond_grid | off | +0 B | +0 B |
+| High-speed probe mode | bltouch_hs | on | +368 B | +0 B |
+| Multiple probing per point (2 + 1 extra) | probing_avg | on | +0 B | +0 B |
+| Preheat before Leveling | preheat_before_leveling | on | +328 B | +0 B |
+| Probe Offset Wizard | probe_offset_wizard | off | +0 B | +0 B |
+| Restore Leveling after G28 | restore_leveling_after_g28 | off | +16 B | +0 B |
+| Z Min Probe Repeatability Test | z_min_probe_repeatability_test | on | +2432 B | +0 B |
+
+### Thermal
+
+| Feature | Id | In your build | Flash | RAM |
+|---|---|---|---|---|
+| Fan Soft Pwm | fan_soft_pwm | on | not toggleable | - |
+| Hotend Idle Timeout | hotend_idle_timeout | on | +1040 B | +16 B |
+| MPC Autotune | mpc_autotune | on | +4224 B | +88 B |
+| MPC autotune menu | mpc_autotune_menu | on | +24 B | +0 B |
+| MPC PTC | mpc_ptc | on | +192 B | +8 B |
+| Pidtempbed | pidtempbed | on | +4048 B | +48 B |
+
+### Host and connectivity
+
+| Feature | Id | In your build | Flash | RAM |
+|---|---|---|---|---|
+| 5 G-code macros in EEPROM | gcode_macros | on | +392 B | +256 B |
+| Advanced Ok | advanced_ok | on | +128 B | +0 B |
+| Auto Report Position | auto_report_position | off | +224 B | +8 B |
+| Auto Report SD Status | auto_report_sd_status | off | +248 B | +12 B |
+| Auto Report Temperatures | auto_report_temperatures | on | +312 B | +8 B |
+| Cable flashing (binary file transfer) | bft | on | +4688 B | +880 B |
+| Emergency Parser (careful) | emergency_parser | on | +696 B | +16 B |
+| Host Action Commands | host_action_commands | on | +1936 B | +4 B |
+| Host Prompt Support | host_prompt_support | on | +1600 B | +4 B |
+| Host status notifications | host_notifications | on | +104 B | +0 B |
+| Long Filename Host Support | long_filename_host_support | on | +480 B | +0 B |
+| Sdcard Sort Alpha | sdcard_sort_alpha | on | +1240 B | +3324 B |
+
+### Screen and UI
+
+| Feature | Id | In your build | Flash | RAM |
+|---|---|---|---|---|
+| Activate Mesh Item | activate_mesh_item | off | +152 B | +0 B |
+| Advk Tune Item | advk_tune_item | off | +32 B | +0 B |
+| Ccloud Print Support | ccloud_print_support | off | not toggleable | - |
+| Jd Tune Item | jd_tune_item | off | +32 B | +0 B |
+| Mediasort Menu Item | mediasort_menu_item | off | +112 B | +0 B |
+| No Blink Ind | no_blink_ind | off | +0 B | +0 B |
+| Preview Menu Item | preview_menu_item | off | +0 B | +0 B |
+| Screen: custom colour themes | ui_colors | on | +2080 B | +8 B |
+| Screen: endstop diagnostics | ui_esdiag | on | +616 B | +0 B |
+| Screen: G-code preview | ui_gcode_preview | on | +1696 B | +0 B |
+| Screen: live temperature plot | ui_plot | on | +1376 B | +1040 B |
+| Screen: lock screen | ui_lockscreen | on | +584 B | +4 B |
+| Screen: toolbar | ui_toolbar | on | +1864 B | +60 B |
+| Smooth Encoder Menuitems | smooth_encoder_menuitems | off | +40 B | +0 B |
+| Zoffset Save Settings | zoffset_save_settings | off | +8 B | +0 B |
+
+### Diagnostics
+
+| Feature | Id | In your build | Flash | RAM |
+|---|---|---|---|---|
+| Config Export | config_export | off | +0 B | +0 B |
+| Eeprom Auto Init | eeprom_auto_init | on | +0 B | +0 B |
+| EEPROM chatter | eeprom_chitchat | off | +864 B | +0 B |
+| Eeprom Init Now (careful) | eeprom_init_now | off | +96 B | +0 B |
+| M503 settings dump | m503 | on | +1424 B | +0 B |
+| Power-loss recovery | plr | on | +3920 B | +996 B |
+| Print statistics (M78) | printcounter | on | +1816 B | +32 B |
+| Sdcard Readonly (careful) | sdcard_readonly | off | not toggleable | - |
+| Speaker | speaker | off | +192 B | +12 B |
 
 ## How it works
 
 ```text
 features.json  ->  apply_features.py  ->  PlatformIO  ->  firmware.bin + manifest.json
-   ^                    |                     ^
-   |                    v                     |
- server.py  <---- budget check (refuses over-budget)  ----
-   ^
-   |  HTTP + static page
-browser
+      ^                  |                   ^
+      |                  v                   |
+   server.py  <-- budget check refuses over-budget selections
+      ^
+      |  HTTP + static page
+   browser
 ```
 
 | File | Role |
 |---|---|
-| `features.json` | the catalogue: every toggle, the `#define`s it flips, its measured flash and RAM cost, and which machines it applies to |
-| `apply_features.py` | copies the baseline configuration, flips the defines, **verifies each flip landed**, stamps the identity, applies the upstream source patch, enforces the budget. Refuses to build a selection that cannot fit |
+| `features.json` | the catalogue: every toggle, the defines it flips, the measured flash and RAM cost, the machines it applies to |
+| `apply_features.py` | copies the baseline configuration, flips the defines, **verifies each flip landed**, stamps the identity, applies the upstream source patch, enforces the budget |
 | `server.py` | stdlib HTTP service: catalogue, build queue, job status, log tail, artifact and manifest download |
-| `web/` | the page: checkboxes, live budget bar, build log, measured-vs-predicted result |
+| `web/` | the page: checkboxes, presets, live budget and size delta, build log, result panel |
+| `measure.py` | the measurement harness that produced the costs above |
+| `merge_measurements.py` | writes measured costs back into the catalogue |
+| `validate_catalog.py` | static consistency check, part of `make verify` - proves every define exists exactly once and that `on_by_default` matches the configuration file |
 
-One build runs at a time. PlatformIO owns the whole tree, so two concurrent compiles would corrupt it; requests queue instead.
-
-## What it looks like when it finishes
-
-![A finished build: predicted 232,312 B, measured 232,312 B, error exact](../../docs/img/configurator-result.png)
-
-## What is verified, and how
-
-Measured on 2026-10-27 by driving the HTTP API, not by reading code:
+## Verified
 
 | Check | Result |
 |---|---|
-| Default selection builds | predicted 232,312 B, measured **232,312 B**, error **0 B** |
-| Two toggles off (ui_colors + is_z) | predicted 228,580 B, measured **228,596 B**, error **+16 B** (8 B of alignment interaction between the two, 16 B against the baseline) | predicted 228,580 B, measured 228,588 B, error **+8 B** (section-alignment interaction between the two features) |
-| `ui_colors` off alone | saves **2,088 B** - was estimated at 1,200 B before calibration |
-| `is_z` off alone | saves **1,644 B** - was estimated at 600 B |
-| Artifact identity | `M115` reports `... Ender3S1-CFG (Oct 27 2026 ...)`, `MACHINE_TYPE:Ender3S1-CFG` |
-| Over-budget request (EEPROM chatter enabled) | **refused before compiling**: "selection is 300 bytes over the 233472 byte application region" |
-| Artifact integrity | `scripts/check-vector-table.py` passes: SP `0x2000BFD8`, reset `0x080092C5` |
+| Default selection | predicted 232,312 B, measured 232,312 B, error **0 B** |
+| Two toggles off (`ui_colors` + `is_z`) | predicted 228,596 B, measured 228,596 B, error **0 B**, 3,748 B smaller than the running image |
+| **Add what fits** (9 features added on top) | predicted 233,328 B including the 64 B/feature margin, measured 232,736 B: 592 B conservative, and it builds |
+| Over-budget request | refused before compiling, with the exact overflow |
+| Artifact identity | `M115` reports `Ender3S1-CFG` |
+| Artifact integrity | `scripts/check-vector-table.py` passes on every build |
+| Catalogue consistency | `validate_catalog.py`: no inconsistencies across all 70 features |
 
-Every other feature in the catalogue still carries an estimate - Marlin's own comment where it gives one, otherwise a symbol-table sum. The table above is how those estimates get replaced: build it, measure it, write the number down.
+![A finished build: predicted equals measured](../../docs/img/configurator-result.png)
 
+## Limits
 
-### The budget check earned its place immediately
-
-The catalogue's first cost for `EEPROM_CHITCHAT` was a guess of 130 bytes. Turning it on overflowed the link by 300 bytes, so the real price is **1,460 bytes** - more than the 1,160 bytes the default selection leaves free. The predictor now refuses that selection before starting a compiler, and the measured number replaced the guess. Every remaining estimate in the catalogue is waiting for the same treatment.
-
-## Limits worth knowing
-
-* **STM32F103 only.** The F401 boards take a different image with a different vector offset; the catalogue marks them unsupported rather than pretending.
-* **This service runs a compiler.** It binds to `127.0.0.1` by default and has no authentication. Do not expose it to a network you do not control.
-* **One job at a time**, queue depth 4. A cold tree (no `build/`) is refused with a pointer to `./scripts/bootstrap.sh`.
-* **Not exposed in the UI:** anything that is not a `#define` toggle. Mesh geometry, pin maps and the calibration values come from the baseline configuration and stay there.
+* **STM32F103 only.** F401 boards take a different image with a different vector offset; the catalogue marks them unsupported rather than pretending.
+* **This service runs a compiler.** It binds to `127.0.0.1` and has no authentication. Do not expose it to a network you do not control.
+* **One job at a time**, queue depth 4. A cold tree is refused with a pointer to `./scripts/bootstrap.sh`.
+* **Curated, not exhaustive.** Marlin has hundreds of options; the catalogue carries the ones that mean something on this machine. Adding another is one entry plus one measurement run.
+* **Marginal costs.** Each price is the cost of that feature against the two baselines above; two features that share code can interact by a few bytes of alignment. The result panel always shows the exact measured size of the selection you built, so the prediction is a planning aid, not a promise.
 
 ## Serverless variant
 
-[`.github/workflows/configurator.yml`](../../.github/workflows/configurator.yml) runs the same apply-and-build on GitHub Actions via `workflow_dispatch`, so a build can happen without any local service. It is a template: it has not been exercised on a runner yet, while the local path above has.
+[``.github/workflows/configurator.yml``](../../.github/workflows/configurator.yml) runs the same apply-and-build on GitHub Actions via `workflow_dispatch`. It is a template: not exercised on a runner yet, while the local path above has.
 
 ---
 

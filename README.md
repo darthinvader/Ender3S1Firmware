@@ -133,7 +133,11 @@ A local web app does the feature picking and the compiling for you: tick what yo
 python3 tools/configurator/server.py        # -> http://127.0.0.1:8787
 ```
 
-It applies your selection to the same pinned tree, refuses combinations that cannot fit, stamps the result `Ender3S1-CFG` so `M115` identifies it, and reports predicted versus measured size. The prediction is calibrated: 0 bytes off on the default selection, 16 bytes off on a two-feature change. Details and limits: [tools/configurator/README.md](tools/configurator/README.md).
+It applies your selection to the same pinned tree, refuses combinations that cannot fit, stamps the result `Ender3S1-CFG` so `M115` identifies it, and tells you whether the image is **bigger or smaller than the one you run now**.
+
+The catalogue holds **70 features** - everything installable on this board, not only what the current build happens to include. Three presets: **What I run now** (your exact feature set), **Minimum**, and **Add what fits** (starts from your set and adds every measured feature that still fits, cheapest first).
+
+Every cost is measured, not estimated: each feature was compiled, on-features by turning them off against the shipped build, off-features against a slimmed baseline with room to grow. `tools/configurator/measure.py` runs the loop, `merge_measurements.py` writes the numbers back, and the catalogue validation in `make verify` proves every define still exists exactly once. Details: [tools/configurator/README.md](tools/configurator/README.md).
 
 ## The screen is a second computer
 

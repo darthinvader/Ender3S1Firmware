@@ -146,11 +146,36 @@ def build_job(job):
     shutil.copyfile(binpath, out)
     digest = hashlib.sha256(out.read_bytes()).hexdigest()
 
+    check = subprocess.run([sys.executable, str(ROOT / "scripts" / "check-vector-table.py"), str(out)],
+                           capture_output=True, text=True)
+    vector_ok = check.returncode == 0
+    if not vector_ok:
+        log_line(job, "vector table check FAILED: " + (check.stdout or check.stderr).strip()[:300])
+
+    catalog_now = json.loads(CATALOG.read_text())
+    defaults = {f["id"]: bool(f["on_by_default"]) for f in catalog_now["features"]}
+    # the API receives overrides, not a full list: anything not named keeps its default
+    chosen = {}
+    for fid, default in defaults.items():
+        if fid in job["off"]:
+            chosen[fid] = False
+        elif fid in job["on"]:
+            chosen[fid] = True
+        else:
+            chosen[fid] = default
+    added = sorted(fid for fid in chosen if chosen[fid] and not defaults[fid])
+    removed = sorted(fid for fid in chosen if not chosen[fid] and defaults[fid])
+    risky = sorted(f["id"] for f in catalog_now["features"]
+                   if f.get("risk") == "high" and chosen.get(f["id"]) != defaults[f["id"]])
+
     manifest = {
         "job": job["id"],
         "built_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
         "machine": job["machine"],
         "selection": {"on": job["on"], "off": job["off"]},
+        "diff_vs_shipped": {"added": added, "removed": removed},
+        "warnings": (["changes a safety or recovery affordance: " + ", ".join(risky)] if risky else [])
+                    + (["artifact failed the ARM vector-table check - do not flash it"] if not vector_ok else []),
         "predicted": predicted["predicted"],
         "measured": {
             "flash_used": int(flash.group(2)),
@@ -160,6 +185,7 @@ def build_job(job):
             "ram_total": int(ram.group(3)) if ram else None,
             "file_size": out.stat().st_size,
             "sha256": digest,
+            "vector_table_ok": vector_ok,
         },
         "machine_name": predicted.get("machine_name_stamped"),
         "upstream": predicted.get("upstream"),
@@ -169,7 +195,8 @@ def build_job(job):
 
     with lock:
         job.update(status="succeeded", phase="done", finished=now(),
-                   result=manifest["measured"], manifest=str(jobdir / "manifest.json"))
+                   result=manifest["measured"], manifest=str(jobdir / "manifest.json"),
+                   diff=manifest["diff_vs_shipped"], warnings=manifest["warnings"])
     log_line(job, "built %d bytes, sha256 %s" % (out.stat().st_size, digest[:16]))
 
 
@@ -242,7 +269,7 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"error": "unknown job"}, 404)
                 view = {k: job.get(k) for k in
                         ("id", "status", "phase", "machine", "created", "finished",
-                         "predicted", "result", "error", "manifest")}
+                         "predicted", "result", "error", "manifest", "diff", "warnings")}
                 view["on"] = job["on"]
                 view["off"] = job["off"]
                 view["log"] = job["log"][-60:]

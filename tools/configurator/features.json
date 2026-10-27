@@ -36,7 +36,11 @@
       "Special_Configurations": "0d422ac4425d12f7f0e1acf41f76ec308aa5b684"
     },
     "stamp_offset": -32,
-    "stamp_offset_note": "the configurator stamps the image with Ender3S1-CFG, whose identity strings are 32 bytes shorter than the shipped Ender3S1-F1-v2 strings; measured by building the default selection"
+    "stamp_offset_note": "the configurator stamps the image with Ender3S1-CFG, whose identity strings are 32 bytes shorter than the shipped Ender3S1-F1-v2 strings; measured by building the default selection",
+    "running_flash": 232344,
+    "running_note": "the image on the printer right now (Ender3S1-F1-v2-20260730.bin) uses 232344 bytes of flash; the configurator stamps a shorter identity string, so the same feature set builds to 232312. The UI compares against 232344 so the delta is honest about the real machine.",
+    "add_margin_per_feature": 64,
+    "add_margin_note": "Marginal costs are measured one feature at a time. Stacking twelve of the off-by-default features overflowed the link by 452 bytes with 152 bytes of predicted headroom - about 38 bytes per added feature of composition error. 64 bytes per added feature is carried as a margin so the planner and the greedy preset stay on the safe side; the result panel always reports the exact measured size."
   },
   "groups": [
     "Motion and extrusion",
@@ -48,12 +52,192 @@
   ],
   "features": [
     {
+      "id": "adaptive_step_smoothing",
+      "label": "Adaptive Step Smoothing",
+      "group": "Motion and extrusion",
+      "summary": "Blends step timing across segments; costs RAM, not much flash.",
+      "macro": "ADAPTIVE_STEP_SMOOTHING",
+      "on_by_default": true,
+      "flash": 208,
+      "ram": 2756,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration_adv.h",
+          "macro": "ADAPTIVE_STEP_SMOOTHING",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
+    },
+    {
+      "id": "advanced_pause_feature",
+      "label": "Advanced Pause Feature",
+      "group": "Motion and extrusion",
+      "summary": "M600 filament change with parking, retract and reload.",
+      "macro": "ADVANCED_PAUSE_FEATURE",
+      "on_by_default": true,
+      "flash": 0,
+      "ram": 0,
+      "cost_source": "not-buildable",
+      "defines": [
+        {
+          "file": "Configuration_adv.h",
+          "macro": "ADVANCED_PAUSE_FEATURE",
+          "on_enabled": true
+        }
+      ],
+      "buildable": false,
+      "build_failed": "required by FILAMENT_RUNOUT_SCRIPT, which uses M600: it cannot be removed on its own"
+    },
+    {
+      "id": "arc_support",
+      "label": "Arc Support",
+      "group": "Motion and extrusion",
+      "summary": "G2/G3 arc moves. The slicer's arc welder needs this; turning it off is the single biggest flash saving available in the motion stack.",
+      "macro": "ARC_SUPPORT",
+      "on_by_default": true,
+      "flash": 2960,
+      "ram": 0,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration_adv.h",
+          "macro": "ARC_SUPPORT",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
+    },
+    {
+      "id": "babystep_display_total",
+      "label": "Babystep Display Total",
+      "group": "Motion and extrusion",
+      "summary": "Shows total babysteps since the last home.",
+      "macro": "BABYSTEP_DISPLAY_TOTAL",
+      "on_by_default": false,
+      "flash": 72,
+      "ram": 4,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration_adv.h",
+          "macro": "BABYSTEP_DISPLAY_TOTAL",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "slimmed baseline (turn on)"
+    },
+    {
+      "id": "babystepping",
+      "label": "Babystepping",
+      "group": "Motion and extrusion",
+      "summary": "Live Z nudging from the panel (includes M290).",
+      "macro": "BABYSTEPPING",
+      "on_by_default": true,
+      "flash": 1196,
+      "ram": 8,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration_adv.h",
+          "macro": "BABYSTEPPING",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
+    },
+    {
+      "id": "bezier_curve_support",
+      "label": "Bezier Curve Support",
+      "group": "Motion and extrusion",
+      "summary": "G5 bezier moves, for hosts or scripts that emit them.",
+      "macro": "BEZIER_CURVE_SUPPORT",
+      "on_by_default": false,
+      "flash": 1168,
+      "ram": 0,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration_adv.h",
+          "macro": "BEZIER_CURVE_SUPPORT",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "slimmed baseline (turn on)"
+    },
+    {
+      "id": "fan_kickstart",
+      "label": "Fan kickstart (100 ms)",
+      "group": "Motion and extrusion",
+      "summary": "Boosts the part fan briefly so it spins up reliably at low duty cycles.",
+      "on_by_default": true,
+      "flash": 56,
+      "ram": 4,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration_adv.h",
+          "macro": "FAN_KICKSTART_TIME",
+          "on_enabled": true,
+          "value": "100"
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
+    },
+    {
+      "id": "filament_load_unload_gcodes",
+      "label": "Filament Load Unload Gcodes",
+      "group": "Motion and extrusion",
+      "summary": "M701/M702 load and unload macros.",
+      "macro": "FILAMENT_LOAD_UNLOAD_GCODES",
+      "on_by_default": true,
+      "flash": 728,
+      "ram": 0,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration_adv.h",
+          "macro": "FILAMENT_LOAD_UNLOAD_GCODES",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
+    },
+    {
+      "id": "fwretract",
+      "label": "Fwretract",
+      "group": "Motion and extrusion",
+      "summary": "Firmware retraction (G10/G11). Redundant with slicer retraction, but harmless.",
+      "macro": "FWRETRACT",
+      "on_by_default": true,
+      "flash": 1856,
+      "ram": 56,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration_adv.h",
+          "macro": "FWRETRACT",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
+    },
+    {
       "id": "is_z",
       "label": "Input shaping on Z",
       "group": "Motion and extrusion",
       "summary": "Third shaper axis. Compiled in the shipped build but switched off at runtime with M593 Z F0, so it currently costs flash and does nothing.",
       "on_by_default": true,
-      "flash": 1644,
+      "flash": 1636,
       "ram": 284,
       "cost_source": "measured",
       "defines": [
@@ -63,24 +247,67 @@
           "on_enabled": true
         }
       ],
-      "measured_on": "2026-10-27"
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
     },
     {
-      "id": "smooth_la",
-      "label": "Smooth linear advance",
+      "id": "input_shaping_x",
+      "label": "Input Shaping X",
       "group": "Motion and extrusion",
-      "summary": "Ramps pressure instead of stepping it (M900 U). Removes classic linear advance's acceleration ceiling.",
+      "summary": "Shaping on X. X and Y are separate defines but share one shaper implementation.",
+      "macro": "INPUT_SHAPING_X",
       "on_by_default": true,
-      "flash": 400,
-      "ram": 40,
-      "cost_source": "estimate",
+      "flash": 1692,
+      "ram": 2532,
+      "cost_source": "measured",
       "defines": [
         {
           "file": "Configuration_adv.h",
-          "macro": "SMOOTH_LIN_ADVANCE",
+          "macro": "INPUT_SHAPING_X",
           "on_enabled": true
         }
-      ]
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
+    },
+    {
+      "id": "input_shaping_y",
+      "label": "Input Shaping Y",
+      "group": "Motion and extrusion",
+      "summary": "Shaping on Y.",
+      "macro": "INPUT_SHAPING_Y",
+      "on_by_default": true,
+      "flash": 1692,
+      "ram": 2532,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration_adv.h",
+          "macro": "INPUT_SHAPING_Y",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
+    },
+    {
+      "id": "ep_babystep",
+      "label": "Live Z from the host (M293/M294)",
+      "group": "Motion and extrusion",
+      "summary": "Babystepping through the emergency parser, so OctoPrint can nudge Z mid-print.",
+      "on_by_default": true,
+      "flash": 160,
+      "ram": 0,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration_adv.h",
+          "macro": "EP_BABYSTEPPING",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
     },
     {
       "id": "nle",
@@ -88,16 +315,57 @@
       "group": "Motion and extrusion",
       "summary": "Flow correction for back-pressure under-extrusion. Inert until A/B/C are calibrated with M592.",
       "on_by_default": true,
-      "flash": 300,
-      "ram": 20,
-      "cost_source": "estimate",
+      "flash": 592,
+      "ram": 28,
+      "cost_source": "measured",
       "defines": [
         {
           "file": "Configuration_adv.h",
           "macro": "NONLINEAR_EXTRUSION",
           "on_enabled": true
         }
-      ]
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
+    },
+    {
+      "id": "nozzle_clean",
+      "label": "Nozzle clean (G12)",
+      "group": "Motion and extrusion",
+      "summary": "Automated nozzle wipe pattern. Only useful if your start G-code calls G12.",
+      "on_by_default": true,
+      "flash": 1400,
+      "ram": 0,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration.h",
+          "macro": "NOZZLE_CLEAN_FEATURE",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
+    },
+    {
+      "id": "nozzle_park_feature",
+      "label": "Nozzle Park Feature",
+      "group": "Motion and extrusion",
+      "summary": "G27 parks the head away from the print.",
+      "macro": "NOZZLE_PARK_FEATURE",
+      "on_by_default": true,
+      "flash": 0,
+      "ram": 0,
+      "cost_source": "not-buildable",
+      "defines": [
+        {
+          "file": "Configuration.h",
+          "macro": "NOZZLE_PARK_FEATURE",
+          "on_enabled": true
+        }
+      ],
+      "buildable": false,
+      "build_failed": "required by ADVANCED_PAUSE_FEATURE, which is enabled: it cannot be removed on its own"
     },
     {
       "id": "skew",
@@ -105,9 +373,9 @@
       "group": "Motion and extrusion",
       "summary": "Compensates a non-square frame. Identity factors until you measure them, so it changes nothing today.",
       "on_by_default": true,
-      "flash": 700,
-      "ram": 40,
-      "cost_source": "estimate",
+      "flash": 1568,
+      "ram": 12,
+      "cost_source": "measured",
       "defines": [
         {
           "file": "Configuration.h",
@@ -119,59 +387,132 @@
           "macro": "SKEW_CORRECTION_GCODE",
           "on_enabled": true
         }
-      ]
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
     },
     {
-      "id": "nozzle_clean",
-      "label": "Nozzle clean (G12)",
+      "id": "slowdown",
+      "label": "Slowdown",
       "group": "Motion and extrusion",
-      "summary": "Automated nozzle wipe pattern. Only useful if your start G-code calls G12.",
+      "summary": "Lowers acceleration near the axes' endstops.",
+      "macro": "SLOWDOWN",
       "on_by_default": true,
-      "flash": 900,
-      "ram": 20,
-      "cost_source": "estimate",
+      "flash": 64,
+      "ram": 0,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration_adv.h",
+          "macro": "SLOWDOWN",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
+    },
+    {
+      "id": "smooth_la",
+      "label": "Smooth linear advance",
+      "group": "Motion and extrusion",
+      "summary": "Ramps pressure instead of stepping it (M900 U). Removes classic linear advance's acceleration ceiling.",
+      "on_by_default": true,
+      "flash": 1280,
+      "ram": 524,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration_adv.h",
+          "macro": "SMOOTH_LIN_ADVANCE",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
+    },
+    {
+      "id": "bed_tramming_include_center",
+      "label": "Bed Tramming Include Center",
+      "group": "Leveling and probing",
+      "summary": "Adds a centre point to the tramming wizard.",
+      "macro": "BED_TRAMMING_INCLUDE_CENTER",
+      "on_by_default": false,
+      "flash": 40,
+      "ram": 0,
+      "cost_source": "measured",
       "defines": [
         {
           "file": "Configuration.h",
-          "macro": "NOZZLE_CLEAN_FEATURE",
+          "macro": "BED_TRAMMING_INCLUDE_CENTER",
           "on_enabled": true
         }
-      ]
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "slimmed baseline (turn on)"
     },
     {
-      "id": "fan_kickstart",
-      "label": "Fan kickstart (100 ms)",
-      "group": "Motion and extrusion",
-      "summary": "Boosts the part fan briefly so it spins up reliably at low duty cycles.",
-      "on_by_default": true,
-      "flash": 120,
+      "id": "enable_leveling_after_g28",
+      "label": "Enable Leveling after G28",
+      "group": "Leveling and probing",
+      "summary": "Turns bed leveling back on automatically after G28.",
+      "macro": "ENABLE_LEVELING_AFTER_G28",
+      "on_by_default": false,
+      "flash": 8,
       "ram": 0,
-      "cost_source": "estimate",
+      "cost_source": "measured",
       "defines": [
         {
-          "file": "Configuration_adv.h",
-          "macro": "FAN_KICKSTART_TIME",
-          "on_enabled": true,
-          "value": "100"
-        }
-      ]
-    },
-    {
-      "id": "ep_babystep",
-      "label": "Live Z from the host (M293/M294)",
-      "group": "Motion and extrusion",
-      "summary": "Babystepping through the emergency parser, so OctoPrint can nudge Z mid-print.",
-      "on_by_default": true,
-      "flash": 250,
-      "ram": 40,
-      "cost_source": "estimate",
-      "defines": [
-        {
-          "file": "Configuration_adv.h",
-          "macro": "EP_BABYSTEPPING",
+          "file": "Configuration.h",
+          "macro": "ENABLE_LEVELING_AFTER_G28",
           "on_enabled": true
         }
-      ]
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "slimmed baseline (turn on)",
+      "conflicts": [
+        "restore_leveling_after_g28"
+      ],
+      "conflict_note": "Marlin refuses both: 'Only enable RESTORE_LEVELING_AFTER_G28 or ENABLE_LEVELING_AFTER_G28, but not both.'"
+    },
+    {
+      "id": "extrapolate_beyond_grid",
+      "label": "Extrapolate Beyond Grid",
+      "group": "Leveling and probing",
+      "summary": "Extrapolates the mesh past its outermost probed points.",
+      "macro": "EXTRAPOLATE_BEYOND_GRID",
+      "on_by_default": false,
+      "flash": 0,
+      "ram": 0,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration.h",
+          "macro": "EXTRAPOLATE_BEYOND_GRID",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "slimmed baseline (turn on)"
+    },
+    {
+      "id": "bltouch_hs",
+      "label": "High-speed probe mode",
+      "group": "Leveling and probing",
+      "summary": "Faster probe deployment. Probing dominates bed-mesh time, so this is worth keeping unless it misbehaves.",
+      "on_by_default": true,
+      "flash": 368,
+      "ram": 0,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration_adv.h",
+          "macro": "BLTOUCH_HS_MODE",
+          "on_enabled": true,
+          "value": "true"
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
     },
     {
       "id": "probing_avg",
@@ -179,9 +520,9 @@
       "group": "Leveling and probing",
       "summary": "Two fast probes and one slow re-probe, averaged. Turn this off and EXTRA_PROBING must stay 1 or the ProUI build sanity check aborts, so the two defines are always flipped together.",
       "on_by_default": true,
-      "flash": 150,
-      "ram": 40,
-      "cost_source": "estimate",
+      "flash": 0,
+      "ram": 0,
+      "cost_source": "measured",
       "defines": [
         {
           "file": "Configuration.h",
@@ -195,25 +536,153 @@
           "on_enabled": true,
           "value": "1"
         }
-      ]
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
     },
     {
-      "id": "bltouch_hs",
-      "label": "High-speed probe mode",
+      "id": "preheat_before_leveling",
+      "label": "Preheat before Leveling",
       "group": "Leveling and probing",
-      "summary": "Faster probe deployment. Probing dominates bed-mesh time, so this is worth keeping unless it misbehaves.",
+      "summary": "Heats the bed before probing so thermal expansion is measured, not guessed.",
+      "macro": "PREHEAT_BEFORE_LEVELING",
       "on_by_default": true,
-      "flash": 100,
+      "flash": 328,
       "ram": 0,
-      "cost_source": "estimate",
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration.h",
+          "macro": "PREHEAT_BEFORE_LEVELING",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
+    },
+    {
+      "id": "probe_offset_wizard",
+      "label": "Probe Offset Wizard",
+      "group": "Leveling and probing",
+      "summary": "On-screen wizard for setting the Z probe offset.",
+      "macro": "PROBE_OFFSET_WIZARD",
+      "on_by_default": false,
+      "flash": 0,
+      "ram": 0,
+      "cost_source": "measured",
       "defines": [
         {
           "file": "Configuration_adv.h",
-          "macro": "BLTOUCH_HS_MODE",
-          "on_enabled": true,
-          "value": "true"
+          "macro": "PROBE_OFFSET_WIZARD",
+          "on_enabled": true
         }
-      ]
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "slimmed baseline (turn on)"
+    },
+    {
+      "id": "restore_leveling_after_g28",
+      "label": "Restore Leveling after G28",
+      "group": "Leveling and probing",
+      "summary": "Restores the mesh state after every G28 instead of leaving it off.",
+      "macro": "RESTORE_LEVELING_AFTER_G28",
+      "on_by_default": false,
+      "flash": 16,
+      "ram": 0,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration.h",
+          "macro": "RESTORE_LEVELING_AFTER_G28",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "slimmed baseline (turn on)",
+      "conflicts": [
+        "enable_leveling_after_g28"
+      ],
+      "conflict_note": "Marlin refuses both: 'Only enable RESTORE_LEVELING_AFTER_G28 or ENABLE_LEVELING_AFTER_G28, but not both.'"
+    },
+    {
+      "id": "z_min_probe_repeatability_test",
+      "label": "Z Min Probe Repeatability Test",
+      "group": "Leveling and probing",
+      "summary": "M48 probe repeatability test.",
+      "macro": "Z_MIN_PROBE_REPEATABILITY_TEST",
+      "on_by_default": true,
+      "flash": 2432,
+      "ram": 0,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration.h",
+          "macro": "Z_MIN_PROBE_REPEATABILITY_TEST",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
+    },
+    {
+      "id": "fan_soft_pwm",
+      "label": "Fan Soft Pwm",
+      "group": "Thermal",
+      "summary": "Software PWM for the part fan. [unsupported here]",
+      "macro": "FAN_SOFT_PWM",
+      "on_by_default": true,
+      "flash": 0,
+      "ram": 0,
+      "cost_source": "not-buildable",
+      "defines": [
+        {
+          "file": "Configuration.h",
+          "macro": "FAN_SOFT_PWM",
+          "on_enabled": true
+        }
+      ],
+      "buildable": false,
+      "build_failed": "required by this board: disabling it fails the sanity check ('FAN_SOFT_PWM is required for your board')"
+    },
+    {
+      "id": "hotend_idle_timeout",
+      "label": "Hotend Idle Timeout",
+      "group": "Thermal",
+      "summary": "Switches heaters off after a period of inactivity.",
+      "macro": "HOTEND_IDLE_TIMEOUT",
+      "on_by_default": true,
+      "flash": 1040,
+      "ram": 16,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration_adv.h",
+          "macro": "HOTEND_IDLE_TIMEOUT",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
+    },
+    {
+      "id": "mpc_autotune",
+      "label": "MPC Autotune",
+      "group": "Thermal",
+      "summary": "M306 autotune - the command that produced this machine's MPC coefficients.",
+      "macro": "MPC_AUTOTUNE",
+      "on_by_default": true,
+      "flash": 4224,
+      "ram": 88,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration.h",
+          "macro": "MPC_AUTOTUNE",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
     },
     {
       "id": "mpc_autotune_menu",
@@ -221,38 +690,58 @@
       "group": "Thermal",
       "summary": "Runs M306 autotune from the screen. Only needed while tuning the hotend model.",
       "on_by_default": true,
-      "flash": 350,
-      "ram": 20,
-      "cost_source": "upstream-comment",
+      "flash": 24,
+      "ram": 0,
+      "cost_source": "measured",
       "defines": [
         {
           "file": "Configuration.h",
           "macro": "MPC_AUTOTUNE_MENU",
           "on_enabled": true
         }
-      ]
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
     },
     {
-      "id": "bft",
-      "label": "Cable flashing (binary file transfer)",
-      "group": "Host and connectivity",
-      "summary": "M28 B1 upload plus reboot-to-install, so firmware can go over USB instead of the SD card dance. Pulls in the heatshrink decoder. Dropping it is the single biggest saving available.",
+      "id": "mpc_ptc",
+      "label": "MPC PTC",
+      "group": "Thermal",
+      "summary": "Models the PTC heat cartridge's resistance change with temperature.",
+      "macro": "MPC_PTC",
       "on_by_default": true,
-      "flash": 4200,
-      "ram": 300,
-      "cost_source": "symbol",
+      "flash": 192,
+      "ram": 8,
+      "cost_source": "measured",
       "defines": [
         {
-          "file": "Configuration_adv.h",
-          "macro": "BINARY_FILE_TRANSFER",
-          "on_enabled": true
-        },
-        {
-          "file": "Configuration_adv.h",
-          "macro": "CUSTOM_FIRMWARE_UPLOAD",
+          "file": "Configuration.h",
+          "macro": "MPC_PTC",
           "on_enabled": true
         }
-      ]
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
+    },
+    {
+      "id": "pidtempbed",
+      "label": "Pidtempbed",
+      "group": "Thermal",
+      "summary": "Bed PID instead of bang-bang. Off means bang-bang, which is cheaper in flash and rougher on the bed.",
+      "macro": "PIDTEMPBED",
+      "on_by_default": true,
+      "flash": 4048,
+      "ram": 48,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration.h",
+          "macro": "PIDTEMPBED",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
     },
     {
       "id": "gcode_macros",
@@ -260,9 +749,9 @@
       "group": "Host and connectivity",
       "summary": "M810 to M819, persisted. Useful for per-filament settings sets (temperature, linear advance, input shaping).",
       "on_by_default": true,
-      "flash": 1200,
-      "ram": 120,
-      "cost_source": "estimate",
+      "flash": 392,
+      "ram": 256,
+      "cost_source": "measured",
       "defines": [
         {
           "file": "Configuration_adv.h",
@@ -274,7 +763,177 @@
           "macro": "GCODE_MACROS_IN_EEPROM",
           "on_enabled": true
         }
-      ]
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
+    },
+    {
+      "id": "advanced_ok",
+      "label": "Advanced Ok",
+      "group": "Host and connectivity",
+      "summary": "Sends buffer occupancy with every ok so a host can keep the queue full.",
+      "macro": "ADVANCED_OK",
+      "on_by_default": true,
+      "flash": 128,
+      "ram": 0,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration_adv.h",
+          "macro": "ADVANCED_OK",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
+    },
+    {
+      "id": "auto_report_position",
+      "label": "Auto Report Position",
+      "group": "Host and connectivity",
+      "summary": "Pushes position reports to the host automatically.",
+      "macro": "AUTO_REPORT_POSITION",
+      "on_by_default": false,
+      "flash": 224,
+      "ram": 8,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration_adv.h",
+          "macro": "AUTO_REPORT_POSITION",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "slimmed baseline (turn on)"
+    },
+    {
+      "id": "auto_report_sd_status",
+      "label": "Auto Report SD Status",
+      "group": "Host and connectivity",
+      "summary": "Pushes SD card status to the host on a timer.",
+      "macro": "AUTO_REPORT_SD_STATUS",
+      "on_by_default": false,
+      "flash": 248,
+      "ram": 12,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration_adv.h",
+          "macro": "AUTO_REPORT_SD_STATUS",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "slimmed baseline (turn on)"
+    },
+    {
+      "id": "auto_report_temperatures",
+      "label": "Auto Report Temperatures",
+      "group": "Host and connectivity",
+      "summary": "Pushes temperature reports to the host.",
+      "macro": "AUTO_REPORT_TEMPERATURES",
+      "on_by_default": true,
+      "flash": 312,
+      "ram": 8,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration_adv.h",
+          "macro": "AUTO_REPORT_TEMPERATURES",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
+    },
+    {
+      "id": "bft",
+      "label": "Cable flashing (binary file transfer)",
+      "group": "Host and connectivity",
+      "summary": "M28 B1 upload plus reboot-to-install, so firmware can go over USB instead of the SD card dance. Pulls in the heatshrink decoder. Dropping it is the single biggest saving available.",
+      "on_by_default": true,
+      "flash": 4688,
+      "ram": 880,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration_adv.h",
+          "macro": "BINARY_FILE_TRANSFER",
+          "on_enabled": true
+        },
+        {
+          "file": "Configuration_adv.h",
+          "macro": "CUSTOM_FIRMWARE_UPLOAD",
+          "on_enabled": true
+        }
+      ],
+      "conflicts": [
+        "sdcard_readonly"
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
+    },
+    {
+      "id": "emergency_parser",
+      "label": "Emergency Parser",
+      "group": "Host and connectivity",
+      "summary": "M108/M112/M410 are acted on mid-move. Turning this off removes the emergency stop.",
+      "macro": "EMERGENCY_PARSER",
+      "on_by_default": true,
+      "flash": 696,
+      "ram": 16,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration_adv.h",
+          "macro": "EMERGENCY_PARSER",
+          "on_enabled": true
+        }
+      ],
+      "risk": "high",
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
+    },
+    {
+      "id": "host_action_commands",
+      "label": "Host Action Commands",
+      "group": "Host and connectivity",
+      "summary": "Marlin sends action commands (pause, prompt) to a capable host.",
+      "macro": "HOST_ACTION_COMMANDS",
+      "on_by_default": true,
+      "flash": 1936,
+      "ram": 4,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration_adv.h",
+          "macro": "HOST_ACTION_COMMANDS",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
+    },
+    {
+      "id": "host_prompt_support",
+      "label": "Host Prompt Support",
+      "group": "Host and connectivity",
+      "summary": "Host can display and answer Marlin prompts.",
+      "macro": "HOST_PROMPT_SUPPORT",
+      "on_by_default": true,
+      "flash": 1600,
+      "ram": 4,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration_adv.h",
+          "macro": "HOST_PROMPT_SUPPORT",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
     },
     {
       "id": "host_notifications",
@@ -282,16 +941,199 @@
       "group": "Host and connectivity",
       "summary": "Marlin pushes state changes to the host as action notifications.",
       "on_by_default": true,
-      "flash": 200,
+      "flash": 104,
       "ram": 0,
-      "cost_source": "estimate",
+      "cost_source": "measured",
       "defines": [
         {
           "file": "Configuration_adv.h",
           "macro": "HOST_STATUS_NOTIFICATIONS",
           "on_enabled": true
         }
-      ]
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
+    },
+    {
+      "id": "long_filename_host_support",
+      "label": "Long Filename Host Support",
+      "group": "Host and connectivity",
+      "summary": "Host can see long SD filenames instead of 8.3 names.",
+      "macro": "LONG_FILENAME_HOST_SUPPORT",
+      "on_by_default": true,
+      "flash": 480,
+      "ram": 0,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration_adv.h",
+          "macro": "LONG_FILENAME_HOST_SUPPORT",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
+    },
+    {
+      "id": "sdcard_sort_alpha",
+      "label": "Sdcard Sort Alpha",
+      "group": "Host and connectivity",
+      "summary": "Sorts the SD file list. Costs a few kilobytes of RAM, not flash.",
+      "macro": "SDCARD_SORT_ALPHA",
+      "on_by_default": true,
+      "flash": 1240,
+      "ram": 3324,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration_adv.h",
+          "macro": "SDCARD_SORT_ALPHA",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
+    },
+    {
+      "id": "activate_mesh_item",
+      "label": "Activate Mesh Item",
+      "group": "Screen and UI",
+      "summary": "Menu entry to temporarily enable mesh leveling.",
+      "macro": "ACTIVATE_MESH_ITEM",
+      "on_by_default": false,
+      "flash": 152,
+      "ram": 0,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration.h",
+          "macro": "ACTIVATE_MESH_ITEM",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "slimmed baseline (turn on)"
+    },
+    {
+      "id": "advk_tune_item",
+      "label": "Advk Tune Item",
+      "group": "Screen and UI",
+      "summary": "Linear advance K tuning straight from the screen.",
+      "macro": "ADVK_TUNE_ITEM",
+      "on_by_default": false,
+      "flash": 32,
+      "ram": 0,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration.h",
+          "macro": "ADVK_TUNE_ITEM",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "slimmed baseline (turn on)"
+    },
+    {
+      "id": "ccloud_print_support",
+      "label": "Ccloud Print Support",
+      "group": "Screen and UI",
+      "summary": "Creality Cloud print support. [does not compile on this tree]",
+      "macro": "CCLOUD_PRINT_SUPPORT",
+      "on_by_default": false,
+      "flash": 0,
+      "ram": 0,
+      "cost_source": "not-buildable",
+      "defines": [
+        {
+          "file": "Configuration.h",
+          "macro": "CCLOUD_PRINT_SUPPORT",
+          "on_enabled": true
+        }
+      ],
+      "buildable": false,
+      "build_failed": "does not compile on this tree: the cloud path needs print-stats globals that are configured out here"
+    },
+    {
+      "id": "jd_tune_item",
+      "label": "Jd Tune Item",
+      "group": "Screen and UI",
+      "summary": "Junction deviation tuning straight from the screen.",
+      "macro": "JD_TUNE_ITEM",
+      "on_by_default": false,
+      "flash": 32,
+      "ram": 0,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration.h",
+          "macro": "JD_TUNE_ITEM",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "slimmed baseline (turn on)"
+    },
+    {
+      "id": "mediasort_menu_item",
+      "label": "Mediasort Menu Item",
+      "group": "Screen and UI",
+      "summary": "Menu entry to toggle SD file sorting.",
+      "macro": "MEDIASORT_MENU_ITEM",
+      "on_by_default": false,
+      "flash": 112,
+      "ram": 0,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration.h",
+          "macro": "MEDIASORT_MENU_ITEM",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "slimmed baseline (turn on)"
+    },
+    {
+      "id": "no_blink_ind",
+      "label": "No Blink Ind",
+      "group": "Screen and UI",
+      "summary": "Stops the dashboard icon from blinking.",
+      "macro": "NO_BLINK_IND",
+      "on_by_default": false,
+      "flash": 0,
+      "ram": 0,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration.h",
+          "macro": "NO_BLINK_IND",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "slimmed baseline (turn on)",
+      "measurement_note": "measured -64 B, i.e. no measurable cost: the difference is inside the linker's section alignment"
+    },
+    {
+      "id": "preview_menu_item",
+      "label": "Preview Menu Item",
+      "group": "Screen and UI",
+      "summary": "Menu entry to toggle the SD thumbnail preview.",
+      "macro": "PREVIEW_MENU_ITEM",
+      "on_by_default": false,
+      "flash": 0,
+      "ram": 0,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration.h",
+          "macro": "PREVIEW_MENU_ITEM",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "slimmed baseline (turn on)"
     },
     {
       "id": "ui_colors",
@@ -299,7 +1141,7 @@
       "group": "Screen and UI",
       "summary": "Colour picker and its menu. Pure cosmetics.",
       "on_by_default": true,
-      "flash": 2088,
+      "flash": 2080,
       "ram": 8,
       "cost_source": "measured",
       "defines": [
@@ -314,24 +1156,8 @@
           "on_enabled": true
         }
       ],
-      "measured_on": "2026-10-27"
-    },
-    {
-      "id": "ui_plot",
-      "label": "Screen: live temperature plot",
-      "group": "Screen and UI",
-      "summary": "Graph of temperature over time on the screen.",
-      "on_by_default": true,
-      "flash": 800,
-      "ram": 40,
-      "cost_source": "upstream-comment",
-      "defines": [
-        {
-          "file": "Configuration.h",
-          "macro": "HAS_PLOT",
-          "on_enabled": true
-        }
-      ]
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
     },
     {
       "id": "ui_esdiag",
@@ -339,33 +1165,18 @@
       "group": "Screen and UI",
       "summary": "Endstop state page in the menu.",
       "on_by_default": true,
-      "flash": 800,
-      "ram": 20,
-      "cost_source": "upstream-comment",
+      "flash": 616,
+      "ram": 0,
+      "cost_source": "measured",
       "defines": [
         {
           "file": "Configuration.h",
           "macro": "HAS_ESDIAG",
           "on_enabled": true
         }
-      ]
-    },
-    {
-      "id": "ui_lockscreen",
-      "label": "Screen: lock screen",
-      "group": "Screen and UI",
-      "summary": "Scroll-to-unlock cover so a stray touch does not start a print.",
-      "on_by_default": true,
-      "flash": 800,
-      "ram": 40,
-      "cost_source": "upstream-comment",
-      "defines": [
-        {
-          "file": "Configuration.h",
-          "macro": "HAS_LOCKSCREEN",
-          "on_enabled": true
-        }
-      ]
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
     },
     {
       "id": "ui_gcode_preview",
@@ -373,16 +1184,56 @@
       "group": "Screen and UI",
       "summary": "Parses thumbnails and preview data from the SD file. Heaviest of the screen extras.",
       "on_by_default": true,
-      "flash": 2000,
-      "ram": 300,
-      "cost_source": "estimate",
+      "flash": 1696,
+      "ram": 0,
+      "cost_source": "measured",
       "defines": [
         {
           "file": "Configuration.h",
           "macro": "HAS_GCODE_PREVIEW",
           "on_enabled": true
         }
-      ]
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
+    },
+    {
+      "id": "ui_plot",
+      "label": "Screen: live temperature plot",
+      "group": "Screen and UI",
+      "summary": "Graph of temperature over time on the screen.",
+      "on_by_default": true,
+      "flash": 1376,
+      "ram": 1040,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration.h",
+          "macro": "HAS_PLOT",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
+    },
+    {
+      "id": "ui_lockscreen",
+      "label": "Screen: lock screen",
+      "group": "Screen and UI",
+      "summary": "Scroll-to-unlock cover so a stray touch does not start a print.",
+      "on_by_default": true,
+      "flash": 584,
+      "ram": 4,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration.h",
+          "macro": "HAS_LOCKSCREEN",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
     },
     {
       "id": "ui_toolbar",
@@ -390,67 +1241,100 @@
       "group": "Screen and UI",
       "summary": "Configurable toolbar on the status screen.",
       "on_by_default": true,
-      "flash": 1000,
-      "ram": 120,
-      "cost_source": "estimate",
+      "flash": 1864,
+      "ram": 60,
+      "cost_source": "measured",
       "defines": [
         {
           "file": "Configuration.h",
           "macro": "HAS_TOOLBAR",
           "on_enabled": true
         }
-      ]
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
     },
     {
-      "id": "printcounter",
-      "label": "Print statistics (M78)",
-      "group": "Diagnostics",
-      "summary": "Counts prints, finished jobs, total time and filament used.",
-      "on_by_default": true,
-      "flash": 1700,
-      "ram": 40,
-      "cost_source": "estimate",
+      "id": "smooth_encoder_menuitems",
+      "label": "Smooth Encoder Menuitems",
+      "group": "Screen and UI",
+      "summary": "Smoother value changes when turning the encoder.",
+      "macro": "SMOOTH_ENCODER_MENUITEMS",
+      "on_by_default": false,
+      "flash": 40,
+      "ram": 0,
+      "cost_source": "measured",
       "defines": [
         {
           "file": "Configuration.h",
-          "macro": "PRINTCOUNTER",
+          "macro": "SMOOTH_ENCODER_MENUITEMS",
           "on_enabled": true
         }
-      ]
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "slimmed baseline (turn on)"
     },
     {
-      "id": "plr",
-      "label": "Power-loss recovery",
+      "id": "zoffset_save_settings",
+      "label": "Zoffset Save Settings",
+      "group": "Screen and UI",
+      "summary": "Saves settings immediately after a Z offset change from the menu.",
+      "macro": "ZOFFSET_SAVE_SETTINGS",
+      "on_by_default": false,
+      "flash": 8,
+      "ram": 0,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration.h",
+          "macro": "ZOFFSET_SAVE_SETTINGS",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "slimmed baseline (turn on)"
+    },
+    {
+      "id": "config_export",
+      "label": "Config Export",
       "group": "Diagnostics",
-      "summary": "Resumes an interrupted job. Needs the SD card left in the printer: the recovery file lives on it.",
-      "on_by_default": true,
-      "flash": 1774,
-      "ram": 60,
-      "cost_source": "symbol",
+      "summary": "M503-style configuration export over the host link.",
+      "macro": "CONFIG_EXPORT",
+      "on_by_default": false,
+      "flash": 0,
+      "ram": 0,
+      "cost_source": "measured",
       "defines": [
         {
           "file": "Configuration_adv.h",
-          "macro": "POWER_LOSS_RECOVERY",
-          "on_enabled": true
+          "macro": "CONFIG_EXPORT",
+          "on_enabled": true,
+          "value": "105"
         }
-      ]
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "slimmed baseline (turn on)"
     },
     {
-      "id": "m503",
-      "label": "M503 settings dump",
+      "id": "eeprom_auto_init",
+      "label": "Eeprom Auto Init",
       "group": "Diagnostics",
-      "summary": "The full settings echo. It is the only way to inspect everything at once, but it costs about 2.7 KB and it is also the command that watchdog-resets this build.",
+      "summary": "Writes defaults automatically when the EEPROM version does not match.",
+      "macro": "EEPROM_AUTO_INIT",
       "on_by_default": true,
-      "flash": 2700,
+      "flash": 0,
       "ram": 0,
-      "cost_source": "upstream-comment",
+      "cost_source": "measured",
       "defines": [
         {
           "file": "Configuration.h",
-          "macro": "DISABLE_M503",
-          "on_enabled": false
+          "macro": "EEPROM_AUTO_INIT",
+          "on_enabled": true
         }
-      ]
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)",
+      "measurement_note": "measured -64 B, i.e. no measurable cost: the difference is inside the linker's section alignment"
     },
     {
       "id": "eeprom_chitchat",
@@ -458,7 +1342,7 @@
       "group": "Diagnostics",
       "summary": "Echoes a confirmation for every settings command. It was trimmed out of the shipped build to buy flash for the feature set, so this is the catalogue's one add-back toggle.",
       "on_by_default": false,
-      "flash": 1460,
+      "flash": 864,
       "ram": 0,
       "cost_source": "measured",
       "defines": [
@@ -469,30 +1353,165 @@
         }
       ],
       "measured_on": "2026-10-27",
-      "measurement_note": "enabling it against the default selection overflowed FLASH by 300 bytes with 1160 free, so the real cost is 1460 bytes, not the 130 first guessed"
+      "measurement_note": "enabling it against the default selection overflowed FLASH by 300 bytes with 1160 free, so the real cost is 1460 bytes, not the 130 first guessed",
+      "measured_against": "slimmed baseline (turn on)"
+    },
+    {
+      "id": "eeprom_init_now",
+      "label": "Eeprom Init Now",
+      "group": "Diagnostics",
+      "summary": "Resets EEPROM on first boot - the opposite of keeping calibration across a flash.",
+      "macro": "EEPROM_INIT_NOW",
+      "on_by_default": false,
+      "flash": 96,
+      "ram": 0,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration.h",
+          "macro": "EEPROM_INIT_NOW",
+          "on_enabled": true
+        }
+      ],
+      "risk": "high",
+      "measured_on": "2026-10-27",
+      "measured_against": "slimmed baseline (turn on)"
+    },
+    {
+      "id": "m503",
+      "label": "M503 settings dump",
+      "group": "Diagnostics",
+      "summary": "The full settings echo. It is the only way to inspect everything at once, but it costs about 2.7 KB and it is also the command that watchdog-resets this build.",
+      "on_by_default": true,
+      "flash": 1424,
+      "ram": 0,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration.h",
+          "macro": "DISABLE_M503",
+          "on_enabled": false
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
+    },
+    {
+      "id": "plr",
+      "label": "Power-loss recovery",
+      "group": "Diagnostics",
+      "summary": "Resumes an interrupted job. Needs the SD card left in the printer: the recovery file lives on it.",
+      "on_by_default": true,
+      "flash": 3920,
+      "ram": 996,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration_adv.h",
+          "macro": "POWER_LOSS_RECOVERY",
+          "on_enabled": true
+        },
+        {
+          "file": "Configuration.h",
+          "macro": "PLR_TUNE_ITEM",
+          "on_enabled": true
+        }
+      ],
+      "note": "the screen's PLR tune item is enabled in the shipped build and depends on this define, so turning PLR off turns the menu item off with it - SanityCheck enforces the pair",
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
+    },
+    {
+      "id": "printcounter",
+      "label": "Print statistics (M78)",
+      "group": "Diagnostics",
+      "summary": "Counts prints, finished jobs, total time and filament used.",
+      "on_by_default": true,
+      "flash": 1816,
+      "ram": 32,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration.h",
+          "macro": "PRINTCOUNTER",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
+    },
+    {
+      "id": "sdcard_readonly",
+      "label": "Sdcard Readonly",
+      "group": "Diagnostics",
+      "summary": "Read-only SD card support. Claimed to save about 2 KB, but it removes the ability to write print job data. [conflicts with cable flashing]",
+      "macro": "SDCARD_READONLY",
+      "on_by_default": false,
+      "flash": 0,
+      "ram": 0,
+      "cost_source": "not-buildable",
+      "defines": [
+        {
+          "file": "Configuration_adv.h",
+          "macro": "SDCARD_READONLY",
+          "on_enabled": true
+        }
+      ],
+      "risk": "high",
+      "buildable": false,
+      "build_failed": "conflicts with POWER_LOSS_RECOVERY ('Either disable SDCARD_READONLY or disable POWER_LOSS_RECOVERY'); it would also need binary file transfer off",
+      "conflicts": [
+        "bft"
+      ]
+    },
+    {
+      "id": "speaker",
+      "label": "Speaker",
+      "group": "Diagnostics",
+      "summary": "Screen buzzer. Needs the panel to actually have one.",
+      "macro": "SPEAKER",
+      "on_by_default": false,
+      "flash": 192,
+      "ram": 12,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration.h",
+          "macro": "SPEAKER",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "slimmed baseline (turn on)"
     }
   ],
   "calibration": {
     "date": "2026-10-27",
-    "method": "each feature toggled off alone against the shipped baseline, built and measured",
-    "baseline": {
-      "flash": 232344,
+    "method": "every feature built twice-baselined: features on in the shipped image were measured by turning them off against it, features off by turning them on against a slimmed baseline (shipped minus the UI extras, BFT, macros). Signed deltas, so a feature that saves flash prices negative.",
+    "baseline_a": {
+      "flash": 232312,
       "ram": 28064
     },
-    "observations": {
-      "ui_colors off": {
-        "flash": 230256,
-        "ram": 28056
-      },
-      "is_z off": {
-        "flash": 230700,
-        "ram": 27780
-      },
-      "ui_colors + is_z off": {
-        "flash": 228620,
-        "ram": 27772
-      },
-      "note": "the two single-feature savings sum to 3732 B, the combined build saved 3724 B: an 8 byte interaction from section alignment. The predictor is therefore accurate to within the alignment granularity, not to the byte."
+    "baseline_b": {
+      "flash": 218944,
+      "ram": 25812,
+      "off": [
+        "ui_gcode_preview",
+        "ui_toolbar",
+        "ui_colors",
+        "ui_plot",
+        "ui_esdiag",
+        "ui_lockscreen",
+        "gcode_macros",
+        "bft"
+      ]
+    },
+    "region": 233472,
+    "counts": {
+      "measured": 65,
+      "failed": 0,
+      "skipped": 5,
+      "total": 70
     }
   }
 }

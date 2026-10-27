@@ -27,6 +27,12 @@
   <aside class="panel">
     <h2>Build</h2>
 
+    <div class="presets">
+      <button id="preset-now" class="preset active" title="Exactly the feature set you are running today">What I run now</button>
+      <button id="preset-min" class="preset" title="Everything that can be turned off, turned off">Minimum</button>
+      <button id="preset-fit" class="preset" title="Start from what you run now and add every feature that still fits">Add what fits</button>
+    </div>
+
     <div class="budget">
       <div class="budget-head">
         <span>Predicted flash</span>
@@ -37,13 +43,14 @@
         <span id="free" class="mono">-</span>
         <span id="region" class="mono muted">-</span>
       </div>
+      <p id="delta" class="delta"></p>
+      <p id="ramline" class="hint mono"></p>
+      <p id="countline" class="hint"></p>
       <p id="budget-warn" class="warn hidden"></p>
     </div>
 
     <div class="actions">
       <button id="build" class="primary">Build firmware</button>
-      <button id="reset" class="ghost">Shipped defaults</button>
-      <button id="slim" class="ghost">Trim to minimum</button>
     </div>
 
     <div id="status" class="status hidden">
@@ -55,12 +62,15 @@
       <h3>Result</h3>
       <table class="kv">
         <tr><th>Flash used</th><td id="r-flash" class="mono"></td></tr>
+        <tr><th>vs what you run</th><td id="r-delta" class="mono"></td></tr>
         <tr><th>Predicted</th><td id="r-pred" class="mono"></td></tr>
         <tr><th>Prediction error</th><td id="r-err" class="mono"></td></tr>
         <tr><th>RAM used</th><td id="r-ram" class="mono"></td></tr>
         <tr><th>File</th><td id="r-size" class="mono"></td></tr>
         <tr><th>SHA-256</th><td id="r-sha" class="mono small"></td></tr>
+        <tr><th>Changes</th><td id="r-changes" class="mono small"></td></tr>
       </table>
+      <p id="r-warn" class="warn hidden"></p>
       <div class="actions">
         <a id="download" class="primary" href="#">Download .bin</a>
         <a id="manifest" class="ghost" href="#">Manifest</a>
@@ -71,7 +81,7 @@
 </main>
 
 <footer>
-  <p>Baseline: the shipped <span id="baseline-label" class="mono">-</span> build. Costs marked <em>estimate</em> are Marlin's own figures or symbol-table sums; the first build of a combination reports the true size, and the difference is shown above.</p>
+  <p>Every cost in the catalogue comes from a real build of this configuration, not from a datasheet: features that are on were measured by turning them off, features that are off by turning them on against a slimmed baseline. <span id="calib" class="mono"></span></p>
 </footer>
 
 <script src="/static/app.js"></script>
