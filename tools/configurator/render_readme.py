@@ -115,6 +115,25 @@ What the configurator does control is the **pairing**: which OS image and which 
 
 Both are bundled with the firmware: **Download bundle (.zip)** contains @BT@firmware.bin@BT@, @BT@manifest.json@BT@, @BT@FLASH-THIS.txt@BT@ and @BT@screen/firmware.zlib@BT@ plus @BT@screen/private/@BT@ for the selected pair. A pack that does not pair with custom firmware is refused with the reason - that mismatch is what bricked this panel in July.
 
+## Writing the card
+
+The page can finish the job: pick the device, pick what goes on it, and the service formats it and copies the files.
+
+* devices come from @BT@lsblk@BT@ - only removable and loop devices are offered, internal disks are refused twice over (not removable, and any device carrying @BT@/@BT@, @BT@/boot@BT@ or @BT@/home@BT@)
+* a mounted card is unmounted first, and the modal names what is about to be destroyed
+* the card is reformatted MBR + FAT32 with 4096-byte clusters, which is what the Creality bootloader needs
+* one card can carry both: the mainboard image is renamed to an unused 8.3 name from the registry, and the screen OS plus @BT@private/@BT@ go alongside it
+* every copy is md5-compared after the write, and the filename is recorded in @BT@firmware/flash-filenames.txt@BT@
+* writing needs root: the service uses passwordless sudo and refuses cleanly (409) instead of hanging on a password prompt
+
+## Over-budget builds
+
+A prediction is not a limit. If the selection is larger than the region, the build button turns red and reads the overflow, a line under it says what will happen, and a modal explains the trade-off before anything runs:
+
+> Prediction: 234,728 B against the application region of 233,472 B - 1,256 B too large. On an STM32F103RCT6 with the 28 KiB bootloader the link will stop at 233,472 B. The build is still allowed because your board may have more flash than this preset assumes, or you may be checking what a configuration would need before trimming. The compiler is the authority here, not this estimate.
+
+Build anyway and the linker answers: if the image really does not fit, the result says exactly how many bytes overflowed.
+
 ## Dependencies between features
 
 Some toggles need another one to exist, and the service enforces both directions:

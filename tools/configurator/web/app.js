@@ -1,6 +1,8 @@
-// Configurator UI: catalogue, live budget, presets, build API.
+// Configurator UI: catalogue, budget, build, and card writing.
 let catalog = null;
 let state = {};
+let devices = [];
+let lastBuildId = null;
 let pollTimer = null;
 let showUnavailable = false;
 
@@ -15,6 +17,23 @@ function featureAvailable(f) { return f.buildable !== false; }
 function machineAvailable(m) { return !!m.supported; }
 function osAvailable(o) { return !!o.bundled; }
 function packAvailable(p) { return !!p.bundled && p.pairs_with === 'custom'; }
+
+function modal(title, bodyHtml, okLabel) {
+  return new Promise((resolve) => {
+    $('modal-title').textContent = title;
+    $('modal-body').innerHTML = bodyHtml;
+    $('modal-ok').textContent = okLabel || 'Continue';
+    $('modal').classList.remove('hidden');
+    const done = (value) => {
+      $('modal').classList.add('hidden');
+      $('modal-ok').onclick = null;
+      $('modal-cancel').onclick = null;
+      resolve(value);
+    };
+    $('modal-ok').onclick = () => done(true);
+    $('modal-cancel').onclick = () => done(false);
+  });
+}
 
 function renderMachines() {
   const sel = $('machine');
@@ -93,13 +112,11 @@ function renderGroups() {
       if (!featureAvailable(f)) {
         cost.textContent = f.on_by_default ? 'fixed on' : 'unavailable';
         cost.title = f.build_failed || '';
+      } else if (f.cost_source === 'measured') {
+        cost.textContent = priced(f) ? signed(f.flash) + ' B' : '~0 B';
+        cost.title = priced(f) ? '' : 'no measurable cost: inside the linker alignment';
       } else {
-        if (f.cost_source === 'measured') {
-          cost.textContent = priced(f) ? signed(f.flash) + ' B' : '~0 B';
-          cost.title = priced(f) ? '' : 'no measurable cost: the difference is inside the linker alignment';
-        } else {
-          cost.textContent = 'measuring';
-        }
+        cost.textContent = 'measuring';
       }
       row.appendChild(cb);
       row.appendChild(text);
@@ -151,7 +168,7 @@ function renderBudget() {
   $('predicted').textContent = fmt(p.flash) + ' B';
   $('bar-used').style.width = (100 * used / region).toFixed(2) + '%';
   $('bar-over').style.width = (100 * over / region).toFixed(2) + '%';
-  $('free').textContent = (p.flash > region ? 'over by ' + fmt(over) : fmt(region - p.flash) + ' B free');
+  $('free').textContent = (over ? 'over by ' + fmt(over) : fmt(region - p.flash) + ' B free');
   $('region').textContent = fmt(region) + ' B region';
   const diff = p.flash - runningFlash();
   const el = $('delta');
@@ -161,12 +178,20 @@ function renderBudget() {
   else { el.textContent = fmt(diff) + ' B larger than what you run now (' + pct + '%)'; el.className = 'delta bad'; }
   $('ramline').textContent = 'RAM ' + fmt(p.ram) + ' B of ' + fmt(m.ram_total) + ' B' +
     (p.margin ? '  (+' + fmt(p.margin) + ' B stacking margin)' : '');
+
   const warn = $('budget-warn');
-  const bad = p.flash > region;
-  warn.classList.toggle('hidden', !bad);
-  if (bad) warn.textContent = 'Over budget by ' + fmt(over) + ' B. Turn something off before building.';
-  $('build').disabled = bad || !catalog.build.toolchain_ready;
+  warn.classList.toggle('hidden', !over);
+  if (over) warn.textContent = 'This image is ' + fmt(over) + ' B larger than the flash region this preset assumes.';
+
+  const build = $('build');
+  build.classList.toggle('over', over > 0);
+  build.textContent = over > 0 ? 'Build anyway (' + fmt(over) + ' B over)' : 'Build firmware';
+  build.disabled = !catalog.build.toolchain_ready;
+  $('build-note').textContent = over > 0
+    ? ('Over budget: ' + fmt(p.flash) + ' B against ' + fmt(region) + ' B. The link will fail on this board unless it has more flash; you can still build to see what it would need.')
+    : '';
   refreshCounts();
+  updateWriteState();
 }
 
 function applyRequires(fid, value) {
@@ -189,9 +214,7 @@ function applyRequires(fid, value) {
 function resolveConflicts(fid, value) {
   const f = catalog.features.find((x) => x.id === fid);
   if (!f || !value) return;
-  for (const other of (f.conflicts || [])) {
-    if (state[other]) state[other] = false;
-  }
+  for (const other of (f.conflicts || [])) if (state[other]) state[other] = false;
 }
 
 function syncCheckboxes() {
@@ -253,11 +276,29 @@ function selection() {
 }
 
 async function startBuild() {
+  const p = predicted();
+  const region = machineById($('machine').value).flash_region;
+  let allowOverflow = false;
+  if (p.flash > region) {
+    const ok = await modal(
+      'This image will not fit on this board',
+      '<p>Prediction: <b>' + fmt(p.flash) + ' B</b> against the application region of <b>' + fmt(region) + ' B</b> - ' +
+      '<b>' + fmt(p.flash - region) + ' B too large</b>.</p>' +
+      '<p>On an STM32F103RCT6 with the 28 KiB bootloader the link will stop at <b>' + fmt(region) + ' B</b>. The build is still allowed because:</p>' +
+      '<ul><li>your board may have more flash than this preset assumes,</li>' +
+      '<li>you may be checking what a configuration would need before trimming.</li></ul>' +
+      '<p>The compiler is the authority here, not this estimate. Build anyway?</p>',
+      'Build anyway');
+    if (!ok) return;
+    allowOverflow = true;
+  }
   $('result').classList.add('hidden');
   $('status').classList.remove('hidden');
   $('phase').textContent = 'submitting';
   $('log').textContent = '';
-  const res = await fetch('/api/build', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(selection()) });
+  const payload = selection();
+  payload.allow_overflow = allowOverflow;
+  const res = await fetch('/api/build', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
   const data = await res.json();
   if (!res.ok) { $('phase').textContent = data.error || 'rejected'; return; }
   $('jobid').textContent = data.id;
@@ -269,13 +310,17 @@ function poll(id) {
   fetch('/api/build/' + id).then((r) => r.json()).then((j) => {
     $('phase').textContent = j.phase || j.status;
     if (j.log) { $('log').textContent = j.log.join('\n'); $('log').scrollTop = $('log').scrollHeight; }
-    if (j.status === 'succeeded') { showResult(j); return; }
+    if (j.status === 'succeeded') {
+      if (j.kind === 'write') showWriteResult(j); else showResult(j);
+      return;
+    }
     if (j.status === 'failed') { $('phase').textContent = 'failed: ' + (j.error || ''); return; }
     pollTimer = setTimeout(() => poll(id), 1200);
   }).catch(() => { pollTimer = setTimeout(() => poll(id), 2500); });
 }
 
 function showResult(j) {
+  lastBuildId = j.id;
   $('result').classList.remove('hidden');
   const r = j.result;
   const pred = j.predicted.flash;
@@ -288,7 +333,6 @@ function showResult(j) {
   $('r-ram').textContent = fmt(r.ram_used) + ' / ' + fmt(r.ram_total) + ' B';
   $('r-size').textContent = fmt(r.file_size) + ' B';
   $('r-sha').textContent = r.sha256;
-
   const sc = catalog.screen || { os: [], assets: [] };
   const osEntry = sc.os.find((x) => x.id === j.screen_os);
   const packEntry = sc.assets.find((x) => x.id === j.screen_assets);
@@ -297,7 +341,6 @@ function showResult(j) {
   const bundleBytes = r.file_size + (osEntry ? osEntry.bytes : 0) + (packEntry ? packEntry.bytes : 0);
   $('r-bundle').textContent = 'firmware.bin + screen/firmware.zlib + screen/private (' +
     (packEntry ? packEntry.files : 0) + ' files) + FLASH-THIS.txt  ~' + Math.round(bundleBytes / 1024) + ' KiB';
-
   const d = j.diff || { added: [], removed: [] };
   const parts = [];
   if (d.removed && d.removed.length) parts.push('removed: ' + d.removed.join(', '));
@@ -313,6 +356,88 @@ function showResult(j) {
   $('download').href = '/api/build/' + j.id + '/firmware.bin';
   $('manifest').href = '/api/build/' + j.id + '/manifest.json';
   $('bundle').href = '/api/build/' + j.id + '/bundle.zip';
+  updateWriteState();
+}
+
+async function loadDevices() {
+  const res = await fetch('/api/devices');
+  const data = await res.json();
+  devices = data.devices || [];
+  const sel = $('device');
+  const previous = sel.value;
+  sel.innerHTML = '';
+  for (const d of devices) {
+    const o = document.createElement('option');
+    o.value = d.path;
+    o.textContent = d.path + '  ' + d.size_human + '  ' + d.model + ' (' + d.transport + ')' + (d.usable ? '' : '  - ' + d.why_not);
+    o.disabled = !d.usable;
+    sel.appendChild(o);
+  }
+  const usable = devices.filter((d) => d.usable);
+  if (usable.length) {
+    sel.value = usable.some((d) => d.path === previous) ? previous : usable[0].path;
+  }
+  sel.onchange = updateWriteState;
+  $('device-note').textContent = usable.length
+    ? (data.sudo ? '' : 'The service is not running with passwordless sudo, so writing is disabled.')
+    : ('No writable device found. Insert an SD card reader - internal disks are never offered. ' +
+       (data.sudo ? '' : 'The service also needs passwordless sudo to write.'));
+  updateWriteState();
+}
+
+function updateWriteState() {
+  const d = devices.find((x) => x.path === $('device').value);
+  const board = $('part-board').checked;
+  const screen = $('part-screen').checked;
+  const needsBuild = board && !lastBuildId;
+  $('write').disabled = !d || !d.usable || (!board && !screen) || needsBuild;
+  $('write-note').textContent = needsBuild
+    ? 'Build the firmware first - the mainboard part needs an image.'
+    : (!board && !screen ? 'Pick at least one thing to write.' : '');
+}
+
+async function doWrite() {
+  const d = devices.find((x) => x.path === $('device').value);
+  const parts = [];
+  if ($('part-board').checked) parts.push('board');
+  if ($('part-screen').checked) parts.push('screen');
+  const sc = catalog.screen;
+  const osEntry = sc.os.find((x) => x.id === $('screen-os').value);
+  const packEntry = sc.assets.find((x) => x.id === $('screen-assets').value);
+  const what = [];
+  if (parts.indexOf('board') !== -1) what.push('the mainboard firmware from build ' + lastBuildId);
+  if (parts.indexOf('screen') !== -1) what.push('screen OS ' + (osEntry ? osEntry.label : '?') + ' + ' + (packEntry ? packEntry.label : '?'));
+  const ok = await modal(
+    'Erase ' + d.path + ' and write to it?',
+    '<p><b>' + d.path + '</b> - ' + d.size_human + ', ' + d.model + ' (' + d.transport + ')</p>' +
+    (d.mounted.length ? '<p>Currently mounted at <span class="mono">' + d.mounted.join(', ') + '</span>; it will be unmounted.</p>' : '') +
+    '<p>Everything on it is destroyed. This writes:</p><ul>' +
+    what.map((w) => '<li>' + w + '</li>').join('') + '</ul>' +
+    '<p>The card is formatted MBR + FAT32 with 4096-byte clusters, which is what the Creality bootloader needs.</p>',
+    'Erase and write');
+  if (!ok) return;
+
+  $('write-result').classList.add('hidden');
+  $('status').classList.remove('hidden');
+  $('phase').textContent = 'queued';
+  $('log').textContent = '';
+  const res = await fetch('/api/write', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ device: d.path, parts: parts, build_id: lastBuildId,
+                           screen_os: $('screen-os').value, screen_assets: $('screen-assets').value })
+  });
+  const data = await res.json();
+  if (!res.ok) { $('phase').textContent = 'refused: ' + (data.error || ''); return; }
+  $('jobid').textContent = data.id;
+  poll(data.id);
+}
+
+function showWriteResult(j) {
+  $('write-result').classList.remove('hidden');
+  const r = j.result || {};
+  const bits = (r.written || []).map((w) => w.what + (w.file ? ' (' + w.file + ')' : ''));
+  $('w-summary').textContent = r.device + ' written: ' + (bits.join(', ') || 'nothing');
+  $('w-next').textContent = 'Now: power the printer off, put the card in the slot (mainboard = front full-size SD, screen = its own microSD with the front panel off), power on. A mainboard flash shows nothing on the screen and takes up to 60 s; verify with M115 at 250000 baud. A screen flash turns blue/orange for about a minute, then the logo holds ~30 s.';
 }
 
 function applyPreset(name) {
@@ -327,8 +452,7 @@ function applyPreset(name) {
     const candidates = catalog.features.filter((f) => !state[f.id] && featureAvailable(f) && priced(f) && f.flash > 0)
       .sort((a, b) => a.flash - b.flash);
     for (const f of candidates) {
-      const blocked = (f.conflicts || []).some((other) => state[other]);
-      if (blocked) continue;
+      if ((f.conflicts || []).some((other) => state[other])) continue;
       state[f.id] = true;
       if (predicted().flash > region) state[f.id] = false;
     }
@@ -349,6 +473,10 @@ async function boot() {
   const cal = catalog.calibration || {};
   $('calib').textContent = cal.date ? ('measured ' + cal.date) : '';
   $('build').onclick = startBuild;
+  $('write').onclick = doWrite;
+  $('refresh-devices').onclick = loadDevices;
+  $('part-board').onchange = updateWriteState;
+  $('part-screen').onchange = updateWriteState;
   $('show-unavailable').onchange = (e) => {
     showUnavailable = e.target.checked;
     renderMachines();
@@ -360,6 +488,7 @@ async function boot() {
     el.dataset.preset = el.id.replace('preset-', '');
     el.onclick = () => applyPreset(el.dataset.preset);
   });
+  await loadDevices();
   const b = catalog.build;
   if (!b.toolchain_ready) {
     $('banner').classList.remove('hidden');

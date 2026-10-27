@@ -10,7 +10,7 @@
 <header>
   <div class="brand">
     <h1>Ender 3 S1 firmware configurator</h1>
-    <p class="lede">Pick the features you want. The service applies them to a pinned Marlin tree, compiles the image and hands back a flashable <code>.bin</code> with its measured size.</p>
+    <p class="lede">Pick the features, build the image, write the card - mainboard, screen, or both.</p>
   </div>
   <div class="machine">
     <label for="machine">Machine</label>
@@ -29,21 +29,15 @@
     <h2>Build</h2>
 
     <div class="presets">
-      <button id="preset-now" class="preset active" title="Exactly the feature set you are running today">What I run now</button>
-      <button id="preset-min" class="preset" title="Everything that can be turned off, turned off">Minimum</button>
-      <button id="preset-fit" class="preset" title="Start from what you run now and add every measured feature that still fits">Add what fits</button>
+      <button id="preset-now" class="preset active">What I run now</button>
+      <button id="preset-min" class="preset">Minimum</button>
+      <button id="preset-fit" class="preset">Add what fits</button>
     </div>
 
     <div class="budget">
-      <div class="budget-head">
-        <span>Predicted flash</span>
-        <span id="predicted" class="mono">-</span>
-      </div>
+      <div class="budget-head"><span>Predicted flash</span><span id="predicted" class="mono">-</span></div>
       <div class="bar"><div id="bar-used" class="bar-used"></div><div id="bar-over" class="bar-over"></div></div>
-      <div class="budget-foot">
-        <span id="free" class="mono">-</span>
-        <span id="region" class="mono muted">-</span>
-      </div>
+      <div class="budget-foot"><span id="free" class="mono">-</span><span id="region" class="mono muted">-</span></div>
       <p id="delta" class="delta"></p>
       <p id="ramline" class="hint mono"></p>
       <p id="countline" class="hint"></p>
@@ -62,6 +56,7 @@
     <div class="actions">
       <button id="build" class="primary">Build firmware</button>
     </div>
+    <p id="build-note" class="hint"></p>
 
     <div id="status" class="status hidden">
       <div class="status-line"><span id="phase" class="mono">queued</span><span id="jobid" class="mono muted"></span></div>
@@ -88,14 +83,46 @@
         <a id="download" class="ghost" href="#">mainboard .bin</a>
         <a id="manifest" class="ghost" href="#">Manifest</a>
       </div>
-      <p class="hint">Verify before flashing: <code>python3 scripts/check-vector-table.py &lt;file&gt;</code>. Then follow docs/FLASHING.md.</p>
+    </div>
+
+    <div class="writebox">
+      <h3>Write to card</h3>
+      <p class="hint" id="write-hint">Pick the device, say what goes on it, and the service formats it and copies the files. Everything on the device is erased.</p>
+      <label for="device">Device</label>
+      <div class="row2">
+        <select id="device"></select>
+        <button id="refresh-devices" class="ghost small-btn" title="Re-scan">re-scan</button>
+      </div>
+      <p id="device-note" class="hint"></p>
+      <div class="checks">
+        <label class="chk"><input type="checkbox" id="part-board" checked> mainboard firmware</label>
+        <label class="chk"><input type="checkbox" id="part-screen" checked> screen OS + assets</label>
+      </div>
+      <button id="write" class="danger" disabled>Write to card</button>
+      <p id="write-note" class="hint"></p>
+      <div id="write-result" class="result hidden">
+        <h3>Card ready</h3>
+        <p id="w-summary" class="hint"></p>
+        <p id="w-next" class="hint"></p>
+      </div>
     </div>
   </aside>
 </main>
 
 <footer>
-  <p>Every cost in the catalogue comes from a real build of this configuration, not from a datasheet: features that are on were measured by turning them off, features that are off by turning them on against a slimmed baseline. <span id="calib" class="mono"></span></p>
+  <p>Every cost in the catalogue comes from a real build of this configuration, not from a datasheet. <span id="calib" class="mono"></span></p>
 </footer>
+
+<div id="modal" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-box">
+    <h3 id="modal-title">Confirm</h3>
+    <div id="modal-body"></div>
+    <div class="actions">
+      <button id="modal-ok" class="danger">Continue</button>
+      <button id="modal-cancel" class="ghost">Cancel</button>
+    </div>
+  </div>
+</div>
 
 <script src="/static/app.js"></script>
 </body>

@@ -35,6 +35,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from tools.configurator import writer  # noqa: E402
+
 ROOT = Path(__file__).resolve().parents[2]
 CATALOG = ROOT / "tools" / "configurator" / "features.json"
 WEB = ROOT / "tools" / "configurator" / "web"
@@ -98,12 +101,15 @@ def build_job(job):
     sel_path = jobdir / "selection.json"
     sel_path.write_text(json.dumps(sel, indent=2))
 
-    rc = run_streaming(job, [sys.executable, str(APPLY),
-                             "--catalog", str(CATALOG),
-                             "--tree", str(TREE),
-                             "--config-dir", str(ROOT / "configs" / "Ender3S1-F1-v2"),
-                             "--selection", "@" + str(sel_path),
-                             "--out", str(jobdir / "predicted.json")], ROOT)
+    apply_cmd = [sys.executable, str(APPLY),
+                 "--catalog", str(CATALOG),
+                 "--tree", str(TREE),
+                 "--config-dir", str(ROOT / "configs" / "Ender3S1-F1-v2"),
+                 "--selection", "@" + str(sel_path),
+                 "--out", str(jobdir / "predicted.json")]
+    if job.get("allow_overflow"):
+        apply_cmd.append("--allow-overflow")
+    rc = run_streaming(job, apply_cmd, ROOT)
     if rc != 0:
         with lock:
             job.update(status="failed", phase="configuration rejected", error="apply_features failed", finished=now())
@@ -209,11 +215,70 @@ def build_job(job):
     log_line(job, "built %d bytes, sha256 %s" % (out.stat().st_size, digest[:16]))
 
 
+def write_job(job):
+    """Format the selected device and put the selected payloads on it."""
+    parts = job["parts"]
+    jobdir = JOBS / job["id"]
+    jobdir.mkdir(parents=True, exist_ok=True)
+    with lock:
+        job.update(status="running", phase="preparing the card", started=now())
+
+    def log(msg):
+        log_line(job, msg)
+
+    firmware = None
+    os_path = assets_path = None
+    build_id = job.get("build_id") or ""
+    os_id, assets_id = job.get("screen_os"), job.get("screen_assets")
+    manifest_path = JOBS / build_id / "manifest.json"
+    if manifest_path.exists():
+        screen = json.loads(manifest_path.read_text()).get("screen", {})
+        os_id = os_id or screen.get("os")
+        assets_id = assets_id or screen.get("assets")
+    catalog = json.loads(CATALOG.read_text())
+    o = next((x for x in catalog.get("screen", {}).get("os", []) if x["id"] == os_id), None)
+    a = next((x for x in catalog.get("screen", {}).get("assets", []) if x["id"] == assets_id), None)
+    os_path = (ROOT / o["path"]) if o else None
+    assets_path = (ROOT / a["path"]) if a else None
+    if "screen" in parts and (os_path is None or assets_path is None):
+        with lock:
+            job.update(status="failed", phase="no screen package",
+                       error="no screen OS/asset pack was resolved for this write", finished=now())
+        return
+    if "board" in parts:
+        firmware = JOBS / build_id / "firmware.bin"
+        if not firmware.exists():
+            with lock:
+                job.update(status="failed", phase="no firmware",
+                           error="build %s has no artifact to write" % build_id, finished=now())
+            return
+
+    try:
+        result = writer.write_card(job["device"], parts, firmware, os_path, assets_path, log)
+    except Exception as exc:
+        with lock:
+            job.update(status="failed", phase="write failed", error=str(exc)[:400], finished=now())
+        return
+
+    (jobdir / "write-manifest.json").write_text(json.dumps(result, indent=2) + chr(10))
+    name = next((w["file"] for w in result["written"] if w["what"] == "mainboard"), None)
+    if name:
+        with open(ROOT / "firmware" / "flash-filenames.txt", "a") as fh:
+            fh.write("    %-17s %s  written by the configurator\n" % (name, time.strftime("%Y-%m-%d")))
+    log("card ready: %s" % ", ".join(w["what"] for w in result["written"]))
+    with lock:
+        job.update(status="succeeded", phase="card written", finished=now(),
+                   result={"device": job["device"], "parts": parts, "written": result["written"]})
+
+
 def worker():
     while True:
         job = work.get()
         try:
-            build_job(job)
+            if job.get("kind") == "write":
+                write_job(job)
+            else:
+                build_job(job)
         except Exception as exc:  # keep the worker alive
             with lock:
                 job.update(status="failed", phase="exception", error=repr(exc), finished=now())
@@ -258,6 +323,12 @@ class Handler(BaseHTTPRequestHandler):
             catalog = json.loads(CATALOG.read_text())
             catalog["build"] = tree_ready()
             return self._json(catalog)
+        if path == "/api/devices":
+            try:
+                devices = writer.list_devices()
+                return self._json({"devices": devices, "sudo": writer._sudo_ok()})
+            except Exception as exc:
+                return self._json({"error": str(exc)[:300]}, 500)
         if path == "/api/builds":
             with lock:
                 items = sorted(jobs.values(), key=lambda j: j["created"], reverse=True)[:20]
@@ -282,9 +353,9 @@ class Handler(BaseHTTPRequestHandler):
                 view = {k: job.get(k) for k in
                         ("id", "status", "phase", "machine", "created", "finished",
                          "predicted", "result", "error", "manifest", "diff", "warnings",
-                         "screen_os", "screen_assets")}
-                view["on"] = job["on"]
-                view["off"] = job["off"]
+                         "screen_os", "screen_assets", "kind", "device", "parts")}
+                view["on"] = job.get("on", [])
+                view["off"] = job.get("off", [])
                 view["log"] = job["log"][-60:]
                 return self._json(view)
         return self._json({"error": "not found"}, 404)
@@ -363,8 +434,60 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _write(self):
+        """POST /api/write - format a device and put the selected payloads on it."""
+        length = int(self.headers.get("Content-Length") or 0)
+        try:
+            body = json.loads(self.rfile.read(length) or b"{}")
+        except Exception:
+            return self._json({"error": "bad json"}, 400)
+
+        device = body.get("device", "")
+        parts = [p for p in body.get("parts", []) if p in ("board", "screen")]
+        build_id = body.get("build_id", "")
+        if not parts:
+            return self._json({"error": "say what to write: board, screen, or both"}, 400)
+        if not device.startswith("/dev/"):
+            return self._json({"error": "a device path is required"}, 400)
+
+        devices = writer.list_devices()
+        target = next((d for d in devices if d["path"] == device), None)
+        if target is None:
+            return self._json({"error": "%s is not a block device this service can see" % device}, 404)
+        if not target["usable"]:
+            return self._json({"error": "refusing %s: %s" % (device, target["why_not"])}, 400)
+        if "board" in parts:
+            if not build_id or not (JOBS / build_id / "firmware.bin").exists():
+                return self._json({"error": "the mainboard part needs a finished build"}, 400)
+        catalog = json.loads(CATALOG.read_text())
+        screen = catalog.get("screen", {})
+        defaults = screen.get("defaults", {})
+        os_id = body.get("screen_os") or defaults.get("os")
+        assets_id = body.get("screen_assets") or defaults.get("assets")
+        if "screen" in parts:
+            if not any(x["id"] == os_id for x in screen.get("os", [])):
+                return self._json({"error": "unknown screen OS %r" % os_id}, 400)
+            if not any(x["id"] == assets_id for x in screen.get("assets", [])):
+                return self._json({"error": "unknown screen asset pack %r" % assets_id}, 400)
+        if not writer._sudo_ok():
+            return self._json({"error": "writing needs root and passwordless sudo is not available; "
+                                        "start the service with sudo"}, 409)
+
+        jid = uuid.uuid4().hex[:12]
+        job = {"id": jid, "kind": "write", "status": "queued", "phase": "queued",
+               "device": device, "parts": parts, "build_id": build_id,
+               "screen_os": os_id, "screen_assets": assets_id,
+               "created": now(), "log": [], "result": None}
+        with lock:
+            jobs[jid] = job
+        work.put(job)
+        return self._json({"id": jid, "status": "queued"}, 202)
+
     def do_POST(self):
-        if urlparse(self.path).path != "/api/build":
+        path = urlparse(self.path).path
+        if path == "/api/write":
+            return self._write()
+        if path != "/api/build":
             return self._json({"error": "not found"}, 404)
         length = int(self.headers.get("Content-Length") or 0)
         try:
@@ -405,8 +528,9 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"error": "queue full, try again shortly"}, 429)
 
         jid = uuid.uuid4().hex[:12]
-        job = {"id": jid, "status": "queued", "phase": "queued", "machine": machine,
+        job = {"id": jid, "kind": "build", "status": "queued", "phase": "queued", "machine": machine,
                "on": on, "off": off, "screen_os": os_id, "screen_assets": assets_id,
+               "allow_overflow": bool(body.get("allow_overflow")),
                "created": now(), "log": [], "predicted": None, "result": None}
         with lock:
             jobs[jid] = job

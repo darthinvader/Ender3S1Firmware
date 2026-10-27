@@ -98,6 +98,8 @@ def main(argv) -> int:
     ap.add_argument("--selection", required=True, help="JSON string or @path")
     ap.add_argument("--out", required=True)
     ap.add_argument("--patch", default="configs/patches/0002-proui-add-ICON_ShapingZ.patch")
+    ap.add_argument("--allow-overflow", action="store_true",
+                    help="build even if the predicted image exceeds the region: the linker decides")
     args = ap.parse_args(argv[1:])
 
     catalog = json.loads(Path(args.catalog).read_text())
@@ -237,8 +239,10 @@ def main(argv) -> int:
     margin = base.get("add_margin_per_feature", 0) * len(added)
     pred_flash += margin
     region = machine["flash_region"]
-    if pred_flash > region:
-        die("selection is %.0f bytes over the %d byte application region" % (pred_flash - region, region))
+    over = pred_flash - region
+    if over > 0 and not args.allow_overflow:
+        die("selection is %.0f bytes over the %d byte application region "
+            "(re-run with --allow-overflow to let the linker decide)" % (over, region))
 
     patch_result = apply_patch(tree, Path(args.patch), "ICON_ShapingZ")
 
@@ -252,7 +256,8 @@ def main(argv) -> int:
         "selection": {fid: state[fid] for fid in sorted(features)},
         "changed": applied,
         "predicted": {"flash": pred_flash, "ram": pred_ram, "region": region,
-                      "flash_free": region - pred_flash},
+                      "flash_free": region - pred_flash,
+                      "over_budget": over > 0, "over_by": max(0, over)},
         "source_patch": patch_result,
         "auto_added": auto_added,
         "auto_removed": auto_removed,

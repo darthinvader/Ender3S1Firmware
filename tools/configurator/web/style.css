@@ -82,3 +82,27 @@ em { color: var(--ink); font-style: normal; }
 .toggle { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: .8rem;
   color: var(--muted); text-transform: none; letter-spacing: 0; }
 .toggle input { width: auto; margin: 0; accent-color: var(--accent); }
+
+.row2 { display: flex; gap: 6px; align-items: center; }
+.small-btn { padding: 6px 8px; font-size: .78rem; }
+.checks { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; }
+.chk { display: flex; gap: 8px; align-items: center; font-size: .85rem; color: var(--ink);
+  text-transform: none; letter-spacing: 0; font-weight: 400; }
+.chk input { width: auto; margin: 0; accent-color: var(--accent); }
+button.danger, a.danger { background: #6e2320; border: 1px solid var(--bad); color: #ffdcd9;
+  font-weight: 700; padding: 9px 14px; border-radius: 8px; text-decoration: none; cursor: pointer; }
+button.danger:hover { background: #8a2b27; }
+button.danger:disabled { opacity: .5; cursor: not-allowed; }
+button.primary.over { background: var(--bad); border-color: var(--bad); color: #1a0505; }
+.writebox { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 12px; }
+.writebox h3 { font-size: .9rem; margin: 0 0 6px; }
+.modal { position: fixed; inset: 0; background: rgba(3, 6, 12, .72); display: flex;
+  align-items: center; justify-content: center; z-index: 50; }
+.modal-box { background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+  padding: 18px 20px; max-width: 520px; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+.modal-box h3 { margin: 0 0 10px; font-size: 1.05rem; }
+.modal-box p { margin: 0 0 8px; font-size: .9rem; color: var(--ink); }
+.modal-box .mono { color: var(--muted); }
+
+/* .modal sets display:flex, so it needs its own hidden rule to actually disappear */
+.modal.hidden { display: none; }

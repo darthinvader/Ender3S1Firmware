@@ -139,6 +139,10 @@ The catalogue holds **71 features** - everything installable on this board, not 
 
 The screen is part of the download too. The panel's own firmware cannot be compiled here - its OS is a proprietary blob and its menus are drawn from the mainboard defines above - so the configurator bundles it instead: pick the OS image and the asset pack, and **Download bundle (.zip)** gives you `firmware.bin`, the screen files and the flashing order in one archive. A pack that does not pair with custom firmware is refused with the reason, because that mismatch is what bricked the panel in July.
 
+It also writes the card. Pick the device from the ones the machine actually has, say whether the mainboard image, the screen package or both go on it, and the service reformats it MBR + FAT32 with 4096-byte clusters, renames the image to an unused 8.3 name, copies the screen files, md5-compares every copy and records the filename in the registry. Internal disks are refused, a mounted card is unmounted first, and the erasure is confirmed in a modal that names the device.
+
+And it will not stop you from building an image that cannot fit. Over the region the button turns red and says by how many bytes, a line under it explains the consequence, and a modal asks before anything runs - because your board may have more flash than the preset assumes, or you may be measuring what a configuration would need. The linker is the authority.
+
 Dependencies are enforced in both directions: asking for the screen's linear-advance tuning item switches linear advance back on (`auto_added` in the manifest), turning linear advance off removes the screen item, and mutually exclusive pairs are refused before a compiler starts.
 
 Every cost is measured, not estimated: each feature was compiled, on-features by turning them off against the shipped build, off-features against a slimmed baseline with room to grow. `tools/configurator/measure.py` runs the loop, `merge_measurements.py` writes the numbers back, and the catalogue validation in `make verify` proves every define still exists exactly once. Details: [tools/configurator/README.md](tools/configurator/README.md).
