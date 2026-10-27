@@ -1,0 +1,16 @@
+# SD card filenames already consumed on this machine
+#
+# The Creality SD bootloader remembers the last filename it flashed and
+# silently refuses to flash that name again. Every flash attempt therefore
+# needs a fresh filename. This file is the record; scripts/flash-card.sh reads
+# it and refuses to reuse anything listed below.
+#
+# Rules: one .bin in the card root, 8.3 name, never "firmware.bin".
+#
+#   filename          notes
+    firmware.bin      used 5x, every attempt silently ignored - never again
+    F1UBL26KGO.bin    2026-07-28  mriscoc UBL+MPC upstream build
+    F1IS27QM.bin      2026-07-28  mriscoc UBL+IS+MPC upstream build
+    F1UBER28.bin      2026-07-28  custom uber build UBL+IS+LA+MPC+BFT
+    fw162238.bin      BFT cable-flash attempt, never written to card
+    F1V2B30G.bin      2026-07-30  custom v2 build, currently on the printer
