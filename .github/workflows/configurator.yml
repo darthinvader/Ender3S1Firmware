@@ -1,0 +1,74 @@
+name: configurator
+
+# Serverless variant of tools/configurator: apply a feature selection to the
+# pinned tree, compile, verify the image and upload it as an artifact.
+# The local service (tools/configurator/server.py) is the tested path; this is
+# the same steps expressed as a workflow so a build can run without any host.
+on:
+  workflow_dispatch:
+    inputs:
+      machine:
+        description: Machine preset id
+        default: ender3s1-f103
+        required: true
+      disable:
+        description: Comma separated feature ids to turn OFF (see tools/configurator/features.json)
+        default: ''
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: configurator build
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Bootstrap the pinned sources
+        run: ./scripts/bootstrap.sh
+
+      - name: Apply the selection
+        env:
+          MACHINE: ${{ inputs.machine }}
+          DISABLE: ${{ inputs.disable }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          off = [x.strip() for x in os.environ.get('DISABLE', '').split(',') if x.strip()]
+          sel = {'machine': os.environ.get('MACHINE', 'ender3s1-f103'), 'on': [], 'off': off}
+          open('/tmp/selection.json', 'w').write(json.dumps(sel))
+          print(json.dumps(sel))
+          PY
+          python3 tools/configurator/apply_features.py \
+            --catalog tools/configurator/features.json \
+            --tree build/Ender3V2S1 \
+            --config-dir configs/Ender3S1-F1-v2 \
+            --selection @/tmp/selection.json \
+            --out build/configurator/meta.json
+
+      - name: Compile
+        run: ./scripts/build.sh | tee build/configurator/build.log
+
+      - name: Verify the image
+        run: |
+          BIN=$(ls -1t build/out/*.bin | head -n 1)
+          python3 scripts/check-vector-table.py "$BIN"
+          sha256sum "$BIN"
+          cp "$BIN" build/configurator/firmware.bin
+
+      - name: Upload firmware and manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware
+          path: |
+            build/configurator/firmware.bin
+            build/configurator/meta.json
+            build/configurator/build.log
+          if-no-files-found: error

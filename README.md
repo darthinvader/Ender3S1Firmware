@@ -90,6 +90,7 @@ Everything above is also in [docs/DESIGN-NOTES.md](docs/DESIGN-NOTES.md) with th
 |-- scripts/                   bootstrap, build, verify, flash-card
 |-- docs/                      the documentation set below
 |-- Makefile                   thin wrappers, nothing hidden
+|-- tools/configurator/        web UI + compile service (feature toggles, budget, build)
 `-- .github/workflows/         checksum + config + docs verification
 ```
 
@@ -122,6 +123,17 @@ The whole chain is five scripts and one configuration folder:
 ![Build and flash pipeline](docs/img/build-pipeline.svg)
 
 Reproducibility caveat worth stating up front: the binaries embed their build date and time (`__DATE__` / `__TIME__` in Version.h), so a rebuild is **not byte-identical**. The meaningful comparison is flash size, RAM usage and the `M115` version string. See [docs/BUILD.md](docs/BUILD.md).
+
+## Configurator (optional)
+
+A local web app does the feature picking and the compiling for you: tick what you want, watch the flash budget, press build, download the image.
+
+```bash
+./scripts/bootstrap.sh                      # once: pinned sources + PlatformIO
+python3 tools/configurator/server.py        # -> http://127.0.0.1:8787
+```
+
+It applies your selection to the same pinned tree, refuses combinations that cannot fit, stamps the result `Ender3S1-CFG` so `M115` identifies it, and reports predicted versus measured size. The prediction is calibrated: 0 bytes off on the default selection, 16 bytes off on a two-feature change. Details and limits: [tools/configurator/README.md](tools/configurator/README.md).
 
 ## The screen is a second computer
 
@@ -205,6 +217,7 @@ A firmware repository that says everything works is not telling you anything. Th
 | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Every failure this machine produced, with symptom, cause and fix |
 | [docs/DESIGN-NOTES.md](docs/DESIGN-NOTES.md) | What was enabled, what was rejected, and what the flash budget bought |
 | [CHANGELOG.md](CHANGELOG.md) | Dated history from stock firmware to the current build |
+| [tools/configurator/README.md](tools/configurator/README.md) | The configurator: feature catalogue, compile service, measured prediction accuracy |
 
 ## Compatibility - read before flashing
 

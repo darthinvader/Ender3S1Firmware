@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ender 3 S1 firmware configurator</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <div class="brand">
+    <h1>Ender 3 S1 firmware configurator</h1>
+    <p class="lede">Pick the features you want. The service applies them to a pinned Marlin tree, compiles the image and hands back a flashable <code>.bin</code> with its measured size.</p>
+  </div>
+  <div class="machine">
+    <label for="machine">Machine</label>
+    <select id="machine"></select>
+    <p id="machine-note" class="hint"></p>
+  </div>
+</header>
+
+<div id="banner" class="banner hidden"></div>
+
+<main>
+  <section id="groups" class="groups" aria-label="Features"></section>
+
+  <aside class="panel">
+    <h2>Build</h2>
+
+    <div class="budget">
+      <div class="budget-head">
+        <span>Predicted flash</span>
+        <span id="predicted" class="mono">-</span>
+      </div>
+      <div class="bar"><div id="bar-used" class="bar-used"></div><div id="bar-over" class="bar-over"></div></div>
+      <div class="budget-foot">
+        <span id="free" class="mono">-</span>
+        <span id="region" class="mono muted">-</span>
+      </div>
+      <p id="budget-warn" class="warn hidden"></p>
+    </div>
+
+    <div class="actions">
+      <button id="build" class="primary">Build firmware</button>
+      <button id="reset" class="ghost">Shipped defaults</button>
+      <button id="slim" class="ghost">Trim to minimum</button>
+    </div>
+
+    <div id="status" class="status hidden">
+      <div class="status-line"><span id="phase" class="mono">queued</span><span id="jobid" class="mono muted"></span></div>
+      <pre id="log" class="log"></pre>
+    </div>
+
+    <div id="result" class="result hidden">
+      <h3>Result</h3>
+      <table class="kv">
+        <tr><th>Flash used</th><td id="r-flash" class="mono"></td></tr>
+        <tr><th>Predicted</th><td id="r-pred" class="mono"></td></tr>
+        <tr><th>Prediction error</th><td id="r-err" class="mono"></td></tr>
+        <tr><th>RAM used</th><td id="r-ram" class="mono"></td></tr>
+        <tr><th>File</th><td id="r-size" class="mono"></td></tr>
+        <tr><th>SHA-256</th><td id="r-sha" class="mono small"></td></tr>
+      </table>
+      <div class="actions">
+        <a id="download" class="primary" href="#">Download .bin</a>
+        <a id="manifest" class="ghost" href="#">Manifest</a>
+      </div>
+      <p class="hint">Verify before flashing: <code>python3 scripts/check-vector-table.py &lt;file&gt;</code>. Then follow docs/FLASHING.md.</p>
+    </div>
+  </aside>
+</main>
+
+<footer>
+  <p>Baseline: the shipped <span id="baseline-label" class="mono">-</span> build. Costs marked <em>estimate</em> are Marlin's own figures or symbol-table sums; the first build of a combination reports the true size, and the difference is shown above.</p>
+</footer>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
