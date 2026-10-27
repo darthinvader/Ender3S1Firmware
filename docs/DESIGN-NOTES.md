@@ -7,7 +7,7 @@ This is the engineering record for the Marlin build that runs on the Ender 3 S1 
 | Flash application region | 233472 B | 232344 B | 1128 B | 99.5% |
 | RAM | 49152 B | 28064 B | 21088 B | 57.1% |
 
-The application link sits above a 28 KiB bootloader at `0x08007000`; the shipped image's vector table was checked against the previous build and matches (SP `0x2000BFD8`, all 63 vectors inside `0x08007000`–`0x08047000`). Flash is the binding constraint here, not RAM: there is about 21 KB of RAM spare and roughly one kilobyte of flash.
+The application link sits above a 28 KiB bootloader at `0x08007000`; the shipped image's vector table was checked against the previous build and matches (SP `0x2000BFD8`, every populated vector inside `0x08007000`–`0x08040000`). Flash is the binding constraint here, not RAM: there is about 21 KB of RAM spare and roughly one kilobyte of flash.
 
 ## Enabled features
 
