@@ -21,6 +21,14 @@ Three presets cover the common cases:
 
 The page always shows whether the current selection is **bigger or smaller than the image you run now**, in bytes and percent, next to the flash bar.
 
+## Using the page
+
+* **Filter** at the top of the feature list matches names, ids and descriptions; group headers collapse when clicked, so 71 features stay navigable.
+* **A build is tied to the selection it was made from.** Change a feature, the machine, the screen image or the asset pack and the write panel disables itself with *"the selection changed since that build"* - the card can no longer be written from a stale image. Change it back and it re-enables, because the signature matches again.
+* **Errors surface as a toast** and in the log, never as a silent no-op: a refused build says why, a failed link says how many bytes overflowed, a refused write says which rule stopped it.
+* **Modals** close on Escape, confirm on Enter, and return focus to where it was.
+* The footer carries the date the costs were measured, so a stale catalogue is visible rather than implied.
+
 ## What a build gives you
 
 | Artifact | What it is |

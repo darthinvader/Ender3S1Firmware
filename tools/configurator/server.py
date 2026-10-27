@@ -253,6 +253,21 @@ def write_job(job):
                            error="build %s has no artifact to write" % build_id, finished=now())
             return
 
+    need = 0
+    if firmware is not None:
+        need += firmware.stat().st_size
+    if os_path is not None and os_path.exists():
+        need += os_path.stat().st_size
+    if assets_path is not None and assets_path.is_dir():
+        need += sum(f.stat().st_size for f in assets_path.rglob("*") if f.is_file())
+    target = next((d for d in writer.list_devices() if d["path"] == job["device"]), None)
+    if target and target["size"] and need > target["size"] * 0.97:
+        with lock:
+            job.update(status="failed", phase="payload too large",
+                       error="the payload needs %d bytes and %s holds %d"
+                             % (need, job["device"], target["size"]), finished=now())
+        return
+
     try:
         result = writer.write_card(job["device"], parts, firmware, os_path, assets_path, log)
     except Exception as exc:

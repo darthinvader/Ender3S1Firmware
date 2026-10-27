@@ -7,91 +7,67 @@
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-<header>
+
+<header class="topbar">
   <div class="brand">
-    <h1>Ender 3 S1 firmware configurator</h1>
-    <p class="lede">Pick the features, build the image, write the card - mainboard, screen, or both.</p>
+    <h1>Ender 3 S1 firmware</h1>
+    <p>Pick features, build the image, write the card. Every cost is measured from a real build of this configuration.</p>
   </div>
-  <div class="machine">
+  <div class="controls">
     <label for="machine">Machine</label>
     <select id="machine"></select>
-    <p id="machine-note" class="hint"></p>
-    <label class="toggle"><input type="checkbox" id="show-unavailable"> Show options that cannot be used here</label>
+    <label class="toggle"><input type="checkbox" id="show-unavailable"> show options that cannot be used here</label>
   </div>
 </header>
 
-<div id="banner" class="banner hidden"></div>
+<div id="toast" class="toast hidden"></div>
+<div id="banner" class="toast hidden" style="background:#1b2333;border-color:var(--warn);color:#ffe9bf;bottom:auto;top:84px"></div>
 
 <main>
-  <section id="groups" class="groups" aria-label="Features"></section>
-
-  <aside class="panel">
-    <h2>Build</h2>
-
-    <div class="presets">
-      <button id="preset-now" class="preset active">What I run now</button>
-      <button id="preset-min" class="preset">Minimum</button>
-      <button id="preset-fit" class="preset">Add what fits</button>
+  <section class="list-col">
+    <div class="toolbar">
+      <input id="filter" type="search" placeholder="Filter features by name, id or description" autocomplete="off">
+      <span id="filter-count" class="hint"></span>
     </div>
+    <div id="groups" class="groups" aria-label="Features"></div>
+  </section>
 
-    <div class="budget">
-      <div class="budget-head"><span>Predicted flash</span><span id="predicted" class="mono">-</span></div>
-      <div class="bar"><div id="bar-used" class="bar-used"></div><div id="bar-over" class="bar-over"></div></div>
-      <div class="budget-foot"><span id="free" class="mono">-</span><span id="region" class="mono muted">-</span></div>
-      <p id="delta" class="delta"></p>
-      <p id="ramline" class="hint mono"></p>
-      <p id="countline" class="hint"></p>
-      <p id="budget-warn" class="warn hidden"></p>
-    </div>
+  <aside class="side">
+    <section class="card">
+      <h2>Build</h2>
+      <div class="presets">
+        <button id="preset-now" class="preset active" data-preset="now">What I run now</button>
+        <button id="preset-min" class="preset" data-preset="min">Minimum</button>
+        <button id="preset-fit" class="preset" data-preset="fit">Add what fits</button>
+      </div>
+      <div class="budget">
+        <div class="budget-head"><span>Predicted flash</span><span id="predicted" class="mono">-</span></div>
+        <div id="bar" class="bar"><div id="bar-used" class="bar-used"></div><div id="bar-over" class="bar-over"></div></div>
+        <div class="budget-foot"><span id="free" class="mono">-</span><span id="region" class="mono">-</span></div>
+        <p id="delta" class="delta"></p>
+        <p id="ramline" class="hint mono"></p>
+        <p id="countline" class="hint"></p>
+        <p id="budget-warn" class="warn hidden"></p>
+      </div>
+      <button id="build" class="primary">Build firmware</button>
+      <p id="build-note" class="hint"></p>
+    </section>
 
-    <div class="screenbox">
-      <h3>Screen</h3>
+    <section class="card">
+      <h2>Screen</h2>
       <label for="screen-os">OS image</label>
       <select id="screen-os"></select>
       <label for="screen-assets">Asset pack</label>
       <select id="screen-assets"></select>
       <p id="screen-note" class="hint"></p>
-    </div>
+    </section>
 
-    <div class="actions">
-      <button id="build" class="primary">Build firmware</button>
-    </div>
-    <p id="build-note" class="hint"></p>
-
-    <div id="status" class="status hidden">
-      <div class="status-line"><span id="phase" class="mono">queued</span><span id="jobid" class="mono muted"></span></div>
-      <pre id="log" class="log"></pre>
-    </div>
-
-    <div id="result" class="result hidden">
-      <h3>Result</h3>
-      <table class="kv">
-        <tr><th>Flash used</th><td id="r-flash" class="mono"></td></tr>
-        <tr><th>vs what you run</th><td id="r-delta" class="mono"></td></tr>
-        <tr><th>Predicted</th><td id="r-pred" class="mono"></td></tr>
-        <tr><th>Prediction error</th><td id="r-err" class="mono"></td></tr>
-        <tr><th>RAM used</th><td id="r-ram" class="mono"></td></tr>
-        <tr><th>File</th><td id="r-size" class="mono"></td></tr>
-        <tr><th>Screen</th><td id="r-screen" class="mono small"></td></tr>
-        <tr><th>Bundle</th><td id="r-bundle" class="mono small"></td></tr>
-        <tr><th>SHA-256</th><td id="r-sha" class="mono small"></td></tr>
-        <tr><th>Changes</th><td id="r-changes" class="mono small"></td></tr>
-      </table>
-      <p id="r-warn" class="warn hidden"></p>
-      <div class="actions">
-        <a id="bundle" class="primary" href="#">Download bundle (.zip)</a>
-        <a id="download" class="ghost" href="#">mainboard .bin</a>
-        <a id="manifest" class="ghost" href="#">Manifest</a>
-      </div>
-    </div>
-
-    <div class="writebox">
-      <h3>Write to card</h3>
-      <p class="hint" id="write-hint">Pick the device, say what goes on it, and the service formats it and copies the files. Everything on the device is erased.</p>
+    <section class="card" id="write-card">
+      <h2>Write to card</h2>
       <label for="device">Device</label>
       <div class="row2">
         <select id="device"></select>
-        <button id="refresh-devices" class="ghost small-btn" title="Re-scan">re-scan</button>
+        <button id="refresh-devices" class="ghost small-btn" title="Scan for cards again">re-scan</button>
       </div>
       <p id="device-note" class="hint"></p>
       <div class="checks">
@@ -100,20 +76,55 @@
       </div>
       <button id="write" class="danger" disabled>Write to card</button>
       <p id="write-note" class="hint"></p>
-      <div id="write-result" class="result hidden">
-        <h3>Card ready</h3>
-        <p id="w-summary" class="hint"></p>
-        <p id="w-next" class="hint"></p>
+    </section>
+
+    <section id="status" class="card hidden">
+      <div class="status-line"><span id="phase" class="mono">queued</span><span id="jobid" class="mono muted"></span></div>
+      <pre id="log" class="log"></pre>
+    </section>
+
+    <section id="result" class="card hidden" data-role="result">
+      <h2>Result</h2>
+      <table class="kv">
+        <tr><th>Flash used</th><td id="r-flash" class="mono"></td></tr>
+        <tr><th>vs what you run</th><td id="r-delta" class="mono"></td></tr>
+        <tr><th>Predicted</th><td id="r-pred" class="mono"></td></tr>
+        <tr><th>Error</th><td id="r-err" class="mono"></td></tr>
+        <tr><th>RAM</th><td id="r-ram" class="mono"></td></tr>
+        <tr><th>File</th><td id="r-size" class="mono"></td></tr>
+        <tr><th>Screen</th><td id="r-screen" class="small"></td></tr>
+        <tr><th>Bundle</th><td id="r-bundle" class="small muted"></td></tr>
+        <tr><th>SHA-256</th><td id="r-sha" class="mono small"></td></tr>
+        <tr><th>Changes</th><td id="r-changes" class="small"></td></tr>
+      </table>
+      <p id="r-warn" class="warn hidden"></p>
+      <div class="actions">
+        <a id="bundle" class="button" href="#">Download bundle (.zip)</a>
+        <a id="download" class="button ghost" href="#">.bin</a>
+        <a id="manifest" class="button ghost" href="#">Manifest</a>
       </div>
-    </div>
+      <div class="actions">
+        <button id="show-log" class="ghost small-btn">show build log</button>
+      </div>
+      <p class="hint">Check it before flashing: <code>python3 scripts/check-vector-table.py &lt;file&gt;</code></p>
+    </section>
+
+    <section id="write-result" class="card hidden">
+      <h2>Card ready</h2>
+      <p id="w-summary" class="hint"></p>
+      <p id="w-next" class="hint"></p>
+    </section>
   </aside>
 </main>
 
 <footer>
-  <p>Every cost in the catalogue comes from a real build of this configuration, not from a datasheet. <span id="calib" class="mono"></span></p>
+  <p>Costs come from real builds of this configuration, not datasheets.
+     <span id="calib" class="mono muted"></span>
+     &nbsp;|&nbsp; <a href="/tools/configurator/README.md">how it works</a>
+     &nbsp;|&nbsp; flashing: docs/FLASHING.md and docs/SCREEN.md in the repository.</p>
 </footer>
 
-<div id="modal" class="modal hidden" role="dialog" aria-modal="true">
+<div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
   <div class="modal-box">
     <h3 id="modal-title">Confirm</h3>
     <div id="modal-body"></div>
