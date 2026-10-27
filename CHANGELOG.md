@@ -1,6 +1,6 @@
 # Changelog
 
-Firmware builds for a Creality Ender 3 S1 (STM32F103RCT6, mainboard v2.4.S1.301, DACAI screen) running mriscoc Professional Firmware. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); releases are tagged for the date a build was flashed and verified on the machine, and every artifact listed is the exact file kept in [firmware/](firmware/).
+Firmware builds for a Creality Ender 3 S1 (STM32F103RCT6, mainboard v2.4.S1.301, DACAI screen) running mriscoc Professional Firmware. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); releases are dated by the day the build was flashed and verified on the machine, and the current one is tagged v2, and every artifact listed is the exact file kept in [firmware/](firmware/).
 
 ## Unreleased
 
