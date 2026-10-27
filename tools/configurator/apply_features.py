@@ -137,6 +137,28 @@ def main(argv) -> int:
     state = dict(default_on)
     state.update(overrides)
 
+    # 2a. resolve dependencies: pull prerequisites in, drop dependents out
+    auto_added, auto_removed = [], []
+    changed = True
+    while changed:
+        changed = False
+        for fid, want in list(state.items()):
+            if not want:
+                continue
+            for req in features[fid].get("requires", []):
+                if not state.get(req):
+                    state[req] = True
+                    auto_added.append({"feature": req, "because": fid})
+                    changed = True
+        for fid, want in list(state.items()):
+            if want:
+                continue
+            for other, ofeat in features.items():
+                if state.get(other) and fid in ofeat.get("requires", []):
+                    state[other] = False
+                    auto_removed.append({"feature": other, "because": fid})
+                    changed = True
+
     # 2b. refuse selections that contain a declared conflict
     problems = []
     for fid, want in state.items():
@@ -217,6 +239,8 @@ def main(argv) -> int:
         "predicted": {"flash": pred_flash, "ram": pred_ram, "region": region,
                       "flash_free": region - pred_flash},
         "source_patch": patch_result,
+        "auto_added": auto_added,
+        "auto_removed": auto_removed,
     }
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)

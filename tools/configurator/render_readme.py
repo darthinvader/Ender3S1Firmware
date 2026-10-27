@@ -50,6 +50,19 @@ for group in cat["groups"]:
         rows.append("| %s | %s | %s | %s | %s |" % (label, bt(f["id"]), flag, cost, ram))
 table = "\n".join(rows)
 
+screen = cat.get("screen", {})
+os_rows = chr(10).join(
+    "| %s | %s | %s B | %s | %s |" % (
+        e["label"], "yes" if e.get("verified_on_this_panel") else "no",
+        format(e["bytes"], ","), e.get("md5", "")[:12] + "...",
+        e.get("note", ""))
+    for e in screen.get("os", []))
+asset_rows = chr(10).join(
+    "| %s | %s | %s B | %s | %s |" % (
+        e["label"], e.get("pairs_with"), format(e["bytes"], ","),
+        "yes" if e.get("bundled") else "no (too large)", e.get("note", ""))
+    for e in screen.get("assets", []))
+
 flash_on = sum(f["flash"] for f in on if f.get("cost_source") == "measured")
 blocked = "\n".join("| %s | %s |" % (f["label"], f.get("build_failed", "no reason recorded")) for f in feats if f.get("buildable") is False)
 top = sorted([f for f in feats if f.get("cost_source") == "measured"], key=lambda f: -f["flash"])[:5]
@@ -85,6 +98,33 @@ The page always shows whether the current selection is **bigger or smaller than 
 | @BT@firmware.bin@BT@ | the image, stamped @BT@Ender3S1-CFG@BT@ so @BT@M115@BT@ identifies it |
 | @BT@manifest.json@BT@ | machine, selection, **what changed versus the shipped build**, warnings, predicted vs measured size, sha256, upstream commits |
 | log | the full PlatformIO output |
+
+## The screen
+
+The panel is a second computer, and it is the one part of this machine whose firmware **cannot be built here**: its OS is a proprietary @BT@.zlib@BT@ and its asset pack is a resource bundle, not code. Its menus are drawn from the mainboard's ProUI defines, which the feature list already controls - so a screen feature is a mainboard toggle, and this page handles it there.
+
+What the configurator does control is the **pairing**: which OS image and which asset pack go on the screen's own card, chosen to match the firmware being built.
+
+| OS image | Verified on this panel | Size | md5 | Note |
+|---|---|---|---|---|
+{os_rows}
+
+| Asset pack | Pairs with | Size | Bundled | Note |
+|---|---|---|---|---|
+{asset_rows}
+
+Both are bundled with the firmware: **Download bundle (.zip)** contains @BT@firmware.bin@BT@, @BT@manifest.json@BT@, @BT@FLASH-THIS.txt@BT@ and @BT@screen/firmware.zlib@BT@ plus @BT@screen/private/@BT@ for the selected pair. A pack that does not pair with custom firmware is refused with the reason - that mismatch is what bricked this panel in July.
+
+## Dependencies between features
+
+Some toggles need another one to exist, and the service enforces both directions:
+
+* @BT@advk_tune_item@BT@ (the screen's linear-advance tuning screen) **requires** @BT@linear_advance@BT@. Ask for the screen item while LA is off and LA is switched back on for you, recorded as @BT@auto_added@BT@ in the manifest.
+* @BT@plr@BT@ and its screen tune item move together, because Marlin's sanity check refuses one without the other.
+* @BT@restore_leveling_after_g28@BT@ and @BT@enable_leveling_after_g28@BT@ are mutually exclusive; both selected is refused before a compiler starts.
+* @BT@bft@BT@ and @BT@sdcard_readonly@BT@ conflict.
+
+Every automatic change is written into the manifest, so a build never quietly differs from what you asked for.
 
 ## Every cost is measured
 
@@ -178,6 +218,8 @@ doc = (doc
        .replace("{n_off}", str(len(off)))
        .replace("{top_rows}", top_rows)
        .replace("{table}", table)
+       .replace("{os_rows}", os_rows)
+       .replace("{asset_rows}", asset_rows)
        .replace("{n_blocked}", str(len([f for f in feats if f.get("buildable") is False])))
        .replace("{blocked_rows}", blocked)
        .replace("{n}", str(len(feats)))

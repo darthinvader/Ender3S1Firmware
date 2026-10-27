@@ -49,6 +49,15 @@
       <p id="budget-warn" class="warn hidden"></p>
     </div>
 
+    <div class="screenbox">
+      <h3>Screen</h3>
+      <label for="screen-os">OS image</label>
+      <select id="screen-os"></select>
+      <label for="screen-assets">Asset pack</label>
+      <select id="screen-assets"></select>
+      <p id="screen-note" class="hint"></p>
+    </div>
+
     <div class="actions">
       <button id="build" class="primary">Build firmware</button>
     </div>
@@ -72,7 +81,8 @@
       </table>
       <p id="r-warn" class="warn hidden"></p>
       <div class="actions">
-        <a id="download" class="primary" href="#">Download .bin</a>
+        <a id="bundle" class="primary" href="#">Download bundle (.zip)</a>
+        <a id="download" class="ghost" href="#">mainboard .bin</a>
         <a id="manifest" class="ghost" href="#">Manifest</a>
       </div>
       <p class="hint">Verify before flashing: <code>python3 scripts/check-vector-table.py &lt;file&gt;</code>. Then follow docs/FLASHING.md.</p>

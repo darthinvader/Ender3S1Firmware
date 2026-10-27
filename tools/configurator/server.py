@@ -30,6 +30,7 @@ import sys
 import threading
 import time
 import uuid
+import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
@@ -190,6 +191,14 @@ def build_job(job):
         "machine_name": predicted.get("machine_name_stamped"),
         "upstream": predicted.get("upstream"),
         "changed": predicted.get("changed"),
+        "auto_added": predicted.get("auto_added", []),
+        "auto_removed": predicted.get("auto_removed", []),
+        "screen": {
+            "os": job.get("screen_os"),
+            "assets": job.get("screen_assets"),
+            "note": "the panel's menus come from the mainboard defines above; these two files are what "
+                    "you write to the screen's own card",
+        },
     }
     (jobdir / "manifest.json").write_text(json.dumps(manifest, indent=2) + chr(10))
 
@@ -263,18 +272,96 @@ class Handler(BaseHTTPRequestHandler):
             if rest.endswith("/manifest.json"):
                 jid = rest[:-len("/manifest.json")]
                 return self._file(JOBS / jid / "manifest.json")
+            if rest.endswith("/bundle.zip"):
+                jid = rest[:-len("/bundle.zip")]
+                return self._bundle(jid)
             with lock:
                 job = jobs.get(rest)
                 if not job:
                     return self._json({"error": "unknown job"}, 404)
                 view = {k: job.get(k) for k in
                         ("id", "status", "phase", "machine", "created", "finished",
-                         "predicted", "result", "error", "manifest", "diff", "warnings")}
+                         "predicted", "result", "error", "manifest", "diff", "warnings",
+                         "screen_os", "screen_assets")}
                 view["on"] = job["on"]
                 view["off"] = job["off"]
                 view["log"] = job["log"][-60:]
                 return self._json(view)
         return self._json({"error": "not found"}, 404)
+
+    def _bundle(self, jid):
+        """Everything needed to flash both processors, in one honest zip."""
+        jobdir = JOBS / jid
+        if not (jobdir / "firmware.bin").exists():
+            return self._json({"error": "no firmware for that job"}, 404)
+        catalog = json.loads(CATALOG.read_text())
+        manifest = json.loads((jobdir / "manifest.json").read_text()) if (jobdir / "manifest.json").exists() else {}
+        screen = catalog.get("screen", {})
+        os_id = manifest.get("screen", {}).get("os")
+        assets_id = manifest.get("screen", {}).get("assets")
+        os_entry = next((x for x in screen.get("os", []) if x["id"] == os_id), None)
+        assets_entry = next((x for x in screen.get("assets", []) if x["id"] == assets_id), None)
+
+        instructions = [
+            "Ender 3 S1 - flash both processors",
+            "",
+            "1. MAINBOARD",
+            "   - write firmware.bin to a FAT32 card (MBR, 4096-byte clusters) with a filename",
+            "     this printer has never used - see firmware/flash-filenames.txt in the repo",
+            "   - printer off, USB unplugged, card into the FRONT slot, power on, wait 60 s",
+            "   - power off, card out, USB back, power on",
+            "   - verify: M115 at 250000 baud reports Ender3S1-CFG",
+            "",
+            "2. SCREEN (only if you are changing the screen firmware)",
+        ]
+        if os_entry:
+            instructions.append("   - OS image:   %s (%d bytes, md5 %s)" % (
+                os_entry["label"], os_entry["bytes"], os_entry.get("md5", "?")))
+        else:
+            instructions.append("   - OS image:   none selected - the panel keeps what it has")
+        if assets_entry:
+            instructions.append("   - assets:     %s (%d bytes)" % (assets_entry["label"], assets_entry["bytes"]))
+        instructions += [
+            "   - card: MBR + FAT32 + 4096-byte clusters, 8 GB or less",
+            "   - copy screen/firmware.zlib and the screen/private folder to the card ROOT",
+            "   - power off, open the front panel, card into the SCREEN's microSD slot, power on",
+            "   - the panel flashes blue/orange for about a minute, then power off and reassemble",
+            "   - first boot after a screen flash holds the logo about 30 s: wait",
+            "",
+            "3. PAIRING RULE - the reason this panel was bricked once",
+            "   custom mainboard firmware  <->  mriscoc assets",
+            "   stock Creality firmware    <->  Creality assets",
+            "   Never mix them. Never flash dcboot.bin. Never flash the mriscoc firmware.zlib.",
+            "",
+            "Full procedures: docs/FLASHING.md and docs/SCREEN.md in the repository.",
+            "",
+            "This bundle was produced by tools/configurator/server.py job " + jid + ".",
+        ]
+
+        import io
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+            z.write(jobdir / "firmware.bin", "firmware.bin")
+            if (jobdir / "manifest.json").exists():
+                z.write(jobdir / "manifest.json", "manifest.json")
+            z.writestr("FLASH-THIS.txt", chr(10).join(instructions) + chr(10))
+            if os_entry:
+                src = ROOT / os_entry["path"]
+                if src.exists():
+                    z.write(src, "screen/firmware.zlib")
+            if assets_entry:
+                src = ROOT / assets_entry["path"]
+                if src.is_dir():
+                    for f in sorted(src.rglob("*")):
+                        if f.is_file():
+                            z.write(f, "screen/private/" + str(f.relative_to(src)))
+        body = buf.getvalue()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/zip")
+        self.send_header("Content-Disposition", 'attachment; filename="ender3s1-bundle-%s.zip"' % jid)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
     def do_POST(self):
         if urlparse(self.path).path != "/api/build":
@@ -293,12 +380,34 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"error": "unsupported machine"}, 400)
         on = [f for f in body.get("on", []) if f in known]
         off = [f for f in body.get("off", []) if f in known]
+
+        screen = catalog.get("screen", {})
+        defaults = screen.get("defaults", {})
+        os_id = body.get("screen_os") or defaults.get("os")
+        assets_id = body.get("screen_assets") or defaults.get("assets")
+        os_entry = next((x for x in screen.get("os", []) if x["id"] == os_id), None)
+        assets_entry = next((x for x in screen.get("assets", []) if x["id"] == assets_id), None)
+        if os_entry is None:
+            return self._json({"error": "unknown screen OS %r" % os_id}, 400)
+        if assets_entry is None:
+            return self._json({"error": "unknown screen asset pack %r" % assets_id}, 400)
+        if assets_entry.get("pairs_with") != "custom":
+            return self._json({
+                "error": ("%s pairs with %s mainboard firmware, and this builder only produces custom "
+                          "firmware. Flashing a mismatched pack is what bricked this panel."
+                          % (assets_entry["label"], assets_entry.get("pairs_with")))
+            }, 400)
+        if not assets_entry.get("bundled"):
+            return self._json({"error": "%s is documented but not shipped (too large for the panel partition)"
+                                        % assets_entry["label"]}, 400)
+
         if len(work.queue) > 3:
             return self._json({"error": "queue full, try again shortly"}, 429)
 
         jid = uuid.uuid4().hex[:12]
         job = {"id": jid, "status": "queued", "phase": "queued", "machine": machine,
-               "on": on, "off": off, "created": now(), "log": [], "predicted": None, "result": None}
+               "on": on, "off": off, "screen_os": os_id, "screen_assets": assets_id,
+               "created": now(), "log": [], "predicted": None, "result": None}
         with lock:
             jobs[jid] = job
         work.put(job)

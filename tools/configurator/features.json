@@ -291,6 +291,26 @@
       "measured_against": "shipped baseline (turn off)"
     },
     {
+      "id": "linear_advance",
+      "label": "Linear advance",
+      "group": "Motion and extrusion",
+      "summary": "Pressure advance (M900). Measured at K0.08 on this machine; the screen's LA tuning item requires it.",
+      "macro": "LIN_ADVANCE",
+      "on_by_default": true,
+      "flash": 3336,
+      "ram": 940,
+      "cost_source": "measured",
+      "defines": [
+        {
+          "file": "Configuration_adv.h",
+          "macro": "LIN_ADVANCE",
+          "on_enabled": true
+        }
+      ],
+      "measured_on": "2026-10-27",
+      "measured_against": "shipped baseline (turn off)"
+    },
+    {
       "id": "ep_babystep",
       "label": "Live Z from the host (M293/M294)",
       "group": "Motion and extrusion",
@@ -1018,7 +1038,7 @@
       "id": "advk_tune_item",
       "label": "Advk Tune Item",
       "group": "Screen and UI",
-      "summary": "Linear advance K tuning straight from the screen.",
+      "summary": "Linear advance K tuning straight from the screen. Needs linear advance compiled; removing LA removes this item too.",
       "macro": "ADVK_TUNE_ITEM",
       "on_by_default": false,
       "flash": 32,
@@ -1032,7 +1052,10 @@
         }
       ],
       "measured_on": "2026-10-27",
-      "measured_against": "slimmed baseline (turn on)"
+      "measured_against": "slimmed baseline (turn on)",
+      "requires": [
+        "linear_advance"
+      ]
     },
     {
       "id": "ccloud_print_support",
@@ -1508,10 +1531,90 @@
     },
     "region": 233472,
     "counts": {
-      "measured": 65,
+      "measured": 66,
       "failed": 0,
       "skipped": 5,
-      "total": 70
+      "total": 71
+    }
+  },
+  "screen": {
+    "note": "The panel runs a compiled .zlib that cannot be built here - its source is not public, and its menus are drawn from the mainboard's ProUI defines, which the mainboard catalogue already controls. What can be chosen is the OS image and the asset pack, and they must match the mainboard firmware family. Choosing a mismatched pack is how this panel was bricked in July.",
+    "os": [
+      {
+        "id": "official-v3.1.9-f401",
+        "label": "Creality V3.1.9 (Two_C)",
+        "path": "screen/official-v3.1.9-f401/firmware.zlib",
+        "bytes": 394835,
+        "md5": "b99abe7a1388e52e2439b8b85c64fbc6",
+        "verified_on_this_panel": true,
+        "note": "the image that revived this panel on 2026-07-29",
+        "bundled": true
+      },
+      {
+        "id": "official-v3.2.1-f401",
+        "label": "Creality V3.2.1",
+        "path": "screen/official-v3.2.1-f401/firmware.zlib",
+        "bytes": 394675,
+        "md5": "bd7d5f8d6acac9d8762338940573f8f8",
+        "verified_on_this_panel": false,
+        "note": "newer official build, never flashed on this panel",
+        "bundled": true
+      }
+    ],
+    "assets": [
+      {
+        "id": "mriscoc",
+        "label": "mriscoc DACAI assets",
+        "path": "screen/mriscoc-dacai-assets/private",
+        "bytes": 314782,
+        "files": 7,
+        "pairs_with": "custom",
+        "verified": true,
+        "bundled": true,
+        "note": "the only pack that pairs with custom mainboard firmware; this is the one that works with this build"
+      },
+      {
+        "id": "official-v1.0.6_C",
+        "label": "Creality V1.0.6_C assets",
+        "path": "screen/official-v1.0.6_C-assets/private",
+        "bytes": 424659,
+        "files": 7,
+        "pairs_with": "stock",
+        "verified": true,
+        "bundled": true,
+        "note": "pairs with the stock rollback image"
+      },
+      {
+        "id": "official-v3.1.9",
+        "label": "Creality V3.1.9 assets",
+        "path": "screen/official-v3.1.9-assets/private",
+        "bytes": 1062964,
+        "files": 14,
+        "pairs_with": "stock",
+        "verified": true,
+        "bundled": true,
+        "note": "the full official asset set for the V3.1.9 OS, accepted by this panel"
+      },
+      {
+        "id": "official-v3.2.1",
+        "label": "Creality V3.2.1 assets (largest)",
+        "path": "screen/official-v3.2.1-assets/private",
+        "bytes": 0,
+        "files": 0,
+        "pairs_with": "stock",
+        "verified": false,
+        "bundled": false,
+        "note": "3.48 MB: the panel rejected a 3.3 MB set with a 'max 1mb' error, so this one is documented but not shipped"
+      }
+    ],
+    "defaults": {
+      "os": "official-v3.1.9-f401",
+      "assets": "mriscoc"
+    },
+    "asset_limit": {
+      "accepted_bytes": 1062964,
+      "rejected_bytes": 3481004,
+      "note": "1.06 MB accepted, 3.3 MB rejected with 'max 1mb'"
     }
   }
 }

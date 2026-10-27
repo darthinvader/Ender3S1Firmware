@@ -29,6 +29,37 @@ The page always shows whether the current selection is **bigger or smaller than 
 | `manifest.json` | machine, selection, **what changed versus the shipped build**, warnings, predicted vs measured size, sha256, upstream commits |
 | log | the full PlatformIO output |
 
+## The screen
+
+The panel is a second computer, and it is the one part of this machine whose firmware **cannot be built here**: its OS is a proprietary `.zlib` and its asset pack is a resource bundle, not code. Its menus are drawn from the mainboard's ProUI defines, which the feature list already controls - so a screen feature is a mainboard toggle, and this page handles it there.
+
+What the configurator does control is the **pairing**: which OS image and which asset pack go on the screen's own card, chosen to match the firmware being built.
+
+| OS image | Verified on this panel | Size | md5 | Note |
+|---|---|---|---|---|
+| Creality V3.1.9 (Two_C) | yes | 394,835 B | b99abe7a1388... | the image that revived this panel on 2026-07-29 |
+| Creality V3.2.1 | no | 394,675 B | bd7d5f8d6aca... | newer official build, never flashed on this panel |
+
+| Asset pack | Pairs with | Size | Bundled | Note |
+|---|---|---|---|---|
+| mriscoc DACAI assets | custom | 314,782 B | yes | the only pack that pairs with custom mainboard firmware; this is the one that works with this build |
+| Creality V1.0.6_C assets | stock | 424,659 B | yes | pairs with the stock rollback image |
+| Creality V3.1.9 assets | stock | 1,062,964 B | yes | the full official asset set for the V3.1.9 OS, accepted by this panel |
+| Creality V3.2.1 assets (largest) | stock | 0 B | no (too large) | 3.48 MB: the panel rejected a 3.3 MB set with a 'max 1mb' error, so this one is documented but not shipped |
+
+Both are bundled with the firmware: **Download bundle (.zip)** contains `firmware.bin`, `manifest.json`, `FLASH-THIS.txt` and `screen/firmware.zlib` plus `screen/private/` for the selected pair. A pack that does not pair with custom firmware is refused with the reason - that mismatch is what bricked this panel in July.
+
+## Dependencies between features
+
+Some toggles need another one to exist, and the service enforces both directions:
+
+* `advk_tune_item` (the screen's linear-advance tuning screen) **requires** `linear_advance`. Ask for the screen item while LA is off and LA is switched back on for you, recorded as `auto_added` in the manifest.
+* `plr` and its screen tune item move together, because Marlin's sanity check refuses one without the other.
+* `restore_leveling_after_g28` and `enable_leveling_after_g28` are mutually exclusive; both selected is refused before a compiler starts.
+* `bft` and `sdcard_readonly` conflict.
+
+Every automatic change is written into the manifest, so a build never quietly differs from what you asked for.
+
 ## Every cost is measured
 
 Nothing in the catalogue is a datasheet number. Each feature was priced by compiling it:
@@ -44,7 +75,7 @@ Two baselines make that possible:
 | A | 232,312 B | 28,064 B | the shipped configuration, built by the configurator |
 | B | 218,944 B | 25,812 B | A minus the screen extras, BFT and the macro slots, to make room for measuring additions |
 
-The catalogue now holds **70 features** (47 on in your build, 23 off): **65 priced by a real build**, and 5 that cannot be toggled on this board at all (the compiler refuses them - see the list below). The most expensive things you are carrying:
+The catalogue now holds **71 features** (48 on in your build, 23 off): **66 priced by a real build**, and 5 that cannot be toggled on this board at all (the compiler refuses them - see the list below). The most expensive things you are carrying:
 
 | Feature | Cost |
 |---|---|
@@ -52,7 +83,7 @@ The catalogue now holds **70 features** (47 on in your build, 23 off): **65 pric
 | MPC Autotune | +4224 B |
 | Pidtempbed | +4048 B |
 | Power-loss recovery | +3920 B |
-| Arc Support | +2960 B |
+| Linear advance | +3336 B |
 
 ### The five that cannot be toggled here
 
@@ -81,6 +112,7 @@ The catalogue now holds **70 features** (47 on in your build, 23 off): **65 pric
 | Input shaping on Z | is_z | on | +1636 B | +284 B |
 | Input Shaping X | input_shaping_x | on | +1692 B | +2532 B |
 | Input Shaping Y | input_shaping_y | on | +1692 B | +2532 B |
+| Linear advance | linear_advance | on | +3336 B | +940 B |
 | Live Z from the host (M293/M294) | ep_babystep | on | +160 B | +0 B |
 | Non-linear extrusion (M592) | nle | on | +592 B | +28 B |
 | Nozzle clean (G12) | nozzle_clean | on | +1400 B | +0 B |
@@ -197,7 +229,7 @@ features.json  ->  apply_features.py  ->  PlatformIO  ->  firmware.bin + manifes
 | Over-budget request | refused before compiling, with the exact overflow |
 | Artifact identity | `M115` reports `Ender3S1-CFG` |
 | Artifact integrity | `scripts/check-vector-table.py` passes on every build |
-| Catalogue consistency | `validate_catalog.py`: no inconsistencies across all 70 features |
+| Catalogue consistency | `validate_catalog.py`: no inconsistencies across all 71 features |
 
 ![A finished build: predicted equals measured](../../docs/img/configurator-result.png)
 

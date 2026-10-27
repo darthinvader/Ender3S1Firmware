@@ -75,3 +75,6 @@ em { color: var(--ink); font-style: normal; }
 .cost.measured { color: var(--ok); }
 .risk { margin-left: 8px; font-size: .68rem; text-transform: uppercase; letter-spacing: .04em;
   color: var(--warn); border: 1px solid #7a6224; border-radius: 4px; padding: 1px 5px; }
+.screenbox { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 12px; }
+.screenbox h3 { font-size: .9rem; margin: 0 0 8px; }
+.screenbox select { margin-bottom: 8px; }

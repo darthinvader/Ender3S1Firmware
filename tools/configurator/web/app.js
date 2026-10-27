@@ -56,7 +56,7 @@ function renderGroups() {
         cb.title = f.build_failed || 'cannot be toggled on this board';
       }
       cb.checked = !!state[f.id];
-      cb.onchange = () => { state[f.id] = cb.checked; renderBudget(); };
+      cb.onchange = () => { state[f.id] = cb.checked; applyRequires(f.id, cb.checked); syncCheckboxes(); renderBudget(); };
       const text = document.createElement('div');
       const name = document.createElement('div');
       name.className = 'name';
@@ -141,6 +141,26 @@ function renderBudget() {
   refreshCounts();
 }
 
+function applyRequires(fid, value) {
+  const f = catalog.features.find((x) => x.id === fid);
+  if (!f) return;
+  if (value) {
+    for (const req of (f.requires || [])) {
+      if (!state[req]) {
+        state[req] = true;
+        applyRequires(req, true);
+      }
+    }
+  } else {
+    for (const other of catalog.features) {
+      if (state[other.id] && (other.requires || []).indexOf(fid) !== -1) {
+        state[other.id] = false;
+        applyRequires(other.id, false);
+      }
+    }
+  }
+}
+
 function syncCheckboxes() {
   document.querySelectorAll('.row input').forEach((cb) => { cb.checked = !!state[cb.dataset.fid]; });
 }
@@ -172,7 +192,46 @@ function applyPreset(name) {
 function selection() {
   const on = [], off = [];
   for (const f of catalog.features) (state[f.id] ? on : off).push(f.id);
-  return { machine: $('machine').value, on: on, off: off };
+  return {
+    machine: $('machine').value, on: on, off: off,
+    screen_os: $('screen-os').value, screen_assets: $('screen-assets').value
+  };
+}
+
+function renderScreen() {
+  const sc = catalog.screen;
+  if (!sc) return;
+  const os = $('screen-os');
+  const assets = $('screen-assets');
+  for (const entry of sc.os) {
+    const o = document.createElement('option');
+    o.value = entry.id;
+    o.textContent = entry.label + '  (' + Math.round(entry.bytes / 1024) + ' KiB' +
+      (entry.verified_on_this_panel ? ', verified here' : ', not verified here') + ')';
+    if (!entry.bundled) o.disabled = true;
+    os.appendChild(o);
+  }
+  for (const entry of sc.assets) {
+    const o = document.createElement('option');
+    o.value = entry.id;
+    o.textContent = entry.label + '  (' + Math.round(entry.bytes / 1024) + ' KiB' +
+      (entry.pairs_with === 'custom' ? ', pairs with this build' : ', stock firmware only');
+    if (!entry.bundled || entry.pairs_with !== 'custom') o.disabled = true;
+    assets.appendChild(o);
+  }
+  os.value = sc.defaults.os;
+  assets.value = sc.defaults.assets;
+  const note = () => {
+    const a = sc.assets.find((x) => x.id === assets.value);
+    const o = sc.os.find((x) => x.id === os.value);
+    const parts = [];
+    if (o) parts.push(o.note || '');
+    if (a) parts.push(a.note || '');
+    $('screen-note').textContent = parts.join(' ');
+  };
+  os.onchange = note;
+  assets.onchange = note;
+  note();
 }
 
 async function startBuild() {
@@ -212,6 +271,7 @@ function showResult(j) {
   $('r-size').textContent = fmt(r.file_size) + ' B';
   $('r-sha').textContent = r.sha256;
   $('download').href = '/api/build/' + j.id + '/firmware.bin';
+  $('bundle').href = '/api/build/' + j.id + '/bundle.zip';
   $('manifest').href = '/api/build/' + j.id + '/manifest.json';
 
   const d = j.diff || { added: [], removed: [] };
@@ -228,6 +288,7 @@ async function boot() {
   catalog = await (await fetch('/api/catalog')).json();
   for (const f of catalog.features) state[f.id] = f.on_by_default;
   renderMachines();
+  renderScreen();
   renderGroups();
   renderBudget();
   const cal = catalog.calibration || {};

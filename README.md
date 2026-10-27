@@ -135,7 +135,11 @@ python3 tools/configurator/server.py        # -> http://127.0.0.1:8787
 
 It applies your selection to the same pinned tree, refuses combinations that cannot fit, stamps the result `Ender3S1-CFG` so `M115` identifies it, and tells you whether the image is **bigger or smaller than the one you run now**.
 
-The catalogue holds **70 features** - everything installable on this board, not only what the current build happens to include. Three presets: **What I run now** (your exact feature set), **Minimum**, and **Add what fits** (starts from your set and adds every measured feature that still fits, cheapest first).
+The catalogue holds **71 features** - everything installable on this board, not only what the current build happens to include. Three presets: **What I run now** (your exact feature set), **Minimum**, and **Add what fits** (starts from your set and adds every measured feature that still fits, cheapest first).
+
+The screen is part of the download too. The panel's own firmware cannot be compiled here - its OS is a proprietary blob and its menus are drawn from the mainboard defines above - so the configurator bundles it instead: pick the OS image and the asset pack, and **Download bundle (.zip)** gives you `firmware.bin`, the screen files and the flashing order in one archive. A pack that does not pair with custom firmware is refused with the reason, because that mismatch is what bricked the panel in July.
+
+Dependencies are enforced in both directions: asking for the screen's linear-advance tuning item switches linear advance back on (`auto_added` in the manifest), turning linear advance off removes the screen item, and mutually exclusive pairs are refused before a compiler starts.
 
 Every cost is measured, not estimated: each feature was compiled, on-features by turning them off against the shipped build, off-features against a slimmed baseline with room to grow. `tools/configurator/measure.py` runs the loop, `merge_measurements.py` writes the numbers back, and the catalogue validation in `make verify` proves every define still exists exactly once. Details: [tools/configurator/README.md](tools/configurator/README.md).
 
