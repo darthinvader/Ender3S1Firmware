@@ -1,0 +1,731 @@
+diff --git a/Marlin/Configuration.h b/Marlin/Configuration.h
+index ba6e78b..1b61ba7 100644
+--- a/Marlin/Configuration.h
++++ b/Marlin/Configuration.h
+@@ -71,7 +71,7 @@
+ 
+ // Choose the name from boards.h that matches your setup
+ #ifndef MOTHERBOARD
+-  #define MOTHERBOARD BOARD_CREALITY_V4  // Creality Board v4.2.2
++  #define MOTHERBOARD BOARD_CREALITY_V24S1_301  // Board v301
+ #endif
+ 
+ // @section serial
+@@ -132,7 +132,7 @@
+ //#define BLUETOOTH
+ 
+ // Name displayed in the LCD "Ready" message and Info menu
+-#define CUSTOM_MACHINE_NAME "Ender3V2-422-MM"
++#define CUSTOM_MACHINE_NAME "Ender3S1-F1-v2"
+ //#define CONFIGURABLE_MACHINE_NAME // Add G-code M550 to set/report the machine name
+ 
+ // Printer's unique ID, used by some programs to differentiate between machines.
+@@ -584,7 +584,7 @@
+  *   998 : Dummy Table that ALWAYS reads 25°C or the temperature defined below.
+  *   999 : Dummy Table that ALWAYS reads 100°C or the temperature defined below.
+  */
+-#define TEMP_SENSOR_0 1
++#define TEMP_SENSOR_0 1  // Stock thermistor
+ #define TEMP_SENSOR_1 0
+ #define TEMP_SENSOR_2 0
+ #define TEMP_SENSOR_3 0
+@@ -660,7 +660,7 @@
+ 
+ // Below this temperature the heater will be switched off
+ // because it probably indicates a broken thermistor wire.
+-#define HEATER_0_MINTEMP   0  // Ender Configs
++#define HEATER_0_MINTEMP   0  // Ender Configs  // Stock thermistor
+ #define HEATER_1_MINTEMP   5
+ #define HEATER_2_MINTEMP   5
+ #define HEATER_3_MINTEMP   5
+@@ -674,7 +674,7 @@
+ // Above this temperature the heater will be switched off.
+ // This can protect components from overheating, but NOT from shorts and failures.
+ // (Use MINTEMP for thermistor short/failure protection.)
+-#define HEATER_0_MAXTEMP 275
++#define HEATER_0_MAXTEMP 275  // Stock thermistor
+ #define HEATER_1_MAXTEMP 275
+ #define HEATER_2_MAXTEMP 275
+ #define HEATER_3_MAXTEMP 275
+@@ -682,7 +682,7 @@
+ #define HEATER_5_MAXTEMP 275
+ #define HEATER_6_MAXTEMP 275
+ #define HEATER_7_MAXTEMP 275
+-#define BED_MAXTEMP      120  // Ender Configs
++#define BED_MAXTEMP      120  // Ender3S1 Configs
+ #define CHAMBER_MAXTEMP  60
+ 
+ /**
+@@ -708,8 +708,8 @@
+  * PIDTEMP : PID temperature control (~4.1K)
+  * MPCTEMP : Predictive Model temperature control. (~1.8K without auto-tune)
+  */
+-#define PIDTEMP           // See the PID Tuning Guide at https://reprap.org/wiki/PID_Tuning
+-//#define MPCTEMP         // See https://marlinfw.org/docs/features/model_predictive_control.html
++//#define PIDTEMP           // See the PID Tuning Guide at https://reprap.org/wiki/PID_Tuning
++#define MPCTEMP         // See https://marlinfw.org/docs/features/model_predictive_control.html
+ 
+ #define PID_MAX  255      // Limit hotend current while PID is active (see PID_FUNCTIONAL_RANGE below); 255=full current
+ #define PID_K1     0.95   // Smoothing factor within any PID loop
+@@ -728,9 +728,9 @@
+     #define DEFAULT_KI_LIST {   1.08,   1.08 }
+     #define DEFAULT_KD_LIST { 114.00, 114.00 }
+   #else
+-    #define DEFAULT_KP  22.89
+-    #define DEFAULT_KI   1.87
+-    #define DEFAULT_KD  70.18
++    #define DEFAULT_KP  17.10
++    #define DEFAULT_KI   1.39
++    #define DEFAULT_KD  52.79
+   #endif
+ #else
+   #define BANG_MAX 255    // Limit hotend current while in bang-bang mode; 255=full current
+@@ -749,12 +749,12 @@
+   #if ENABLED(MPC_AUTOTUNE)
+     //#define MPC_AUTOTUNE_DEBUG                      // Enable MPC debug logging (~870 bytes of flash)
+   #endif
+-  //#define MPC_EDIT_MENU                             // Add MPC editing to the "Advanced Settings" menu. (~1.3K bytes of flash)
+-  //#define MPC_AUTOTUNE_MENU                         // Add MPC auto-tuning to the "Advanced Settings" menu. (~350 bytes of flash)
++  #define MPC_EDIT_MENU                             // Add MPC editing to the "Advanced Settings" menu. (~1.3K bytes of flash)
++  #define MPC_AUTOTUNE_MENU                         // Add MPC auto-tuning to the "Advanced Settings" menu. (~350 bytes of flash)
+ 
+   #define MPC_MAX 255                                 // (0..255) Current to nozzle while MPC is active.
+   #define MPC_HEATER_POWER { 40.0f }                  // (W) Nominal heat cartridge powers.
+-  //#define MPC_PTC                                   // Hotend power changes with temperature (e.g., PTC heat cartridges).
++  #define MPC_PTC                                   // Hotend power changes with temperature (e.g., PTC heat cartridges).
+   #if ENABLED(MPC_PTC)
+     #define MPC_HEATER_ALPHA { 0.0028f }              // Temperature coefficient of resistance of the heat cartridges.
+     #define MPC_HEATER_REFTEMP { 20 }                 // (°C) Reference temperature for MPC_HEATER_POWER and MPC_HEATER_ALPHA.
+@@ -763,11 +763,11 @@
+   #define MPC_INCLUDE_FAN                             // Model the fan speed?
+ 
+   // Measured physical constants from M306
+-  #define MPC_BLOCK_HEAT_CAPACITY { 16.7f }           // (J/K) Heat block heat capacities.
+-  #define MPC_SENSOR_RESPONSIVENESS { 0.22f }         // (K/s per ∆K) Rate of change of sensor temperature from heat block.
+-  #define MPC_AMBIENT_XFER_COEFF { 0.068f }           // (W/K) Heat transfer coefficients from heat block to room air with fan off.
++  #define MPC_BLOCK_HEAT_CAPACITY { 14.40f }           // (J/K) Heat block heat capacities.
++  #define MPC_SENSOR_RESPONSIVENESS { 0.2187f }         // (K/s per ∆K) Rate of change of sensor temperature from heat block.
++  #define MPC_AMBIENT_XFER_COEFF { 0.1257f }           // (W/K) Heat transfer coefficients from heat block to room air with fan off.
+   #if ENABLED(MPC_INCLUDE_FAN)
+-    #define MPC_AMBIENT_XFER_COEFF_FAN255 { 0.097f }  // (W/K) Heat transfer coefficients from heat block to room air with fan on full.
++    #define MPC_AMBIENT_XFER_COEFF_FAN255 { 0.1315f }  // (W/K) Heat transfer coefficients from heat block to room air with fan on full.
+   #endif
+ 
+   // For one fan and multiple hotends MPC needs to know how to apply the fan cooling effect.
+@@ -828,9 +828,9 @@
+ 
+   // 120V 250W silicone heater into 4mm borosilicate (MendelMax 1.5+)
+   // from FOPDT model - kp=.39 Tp=405 Tdead=66, Tc set to 79.2, aggressive factor of .15 (vs .1, 1, 10)
+-  #define DEFAULT_BED_KP  462.10
+-  #define DEFAULT_BED_KI    85.47
+-  #define DEFAULT_BED_KD 624.59
++  #define DEFAULT_BED_KP  54.86
++  #define DEFAULT_BED_KI   10.06
++  #define DEFAULT_BED_KD 199.38
+ 
+   // FIND YOUR OWN: "M303 E-1 C8 S90" to run autotune on the bed at 90 degreesC for 8 cycles.
+ #else
+@@ -1220,12 +1220,12 @@
+ // @section endstops
+ 
+ // Enable pullup for all endstops to prevent a floating state
+-#define ENDSTOPPULLUPS
++//#define ENDSTOPPULLUPS  // Board v301 Configs
+ #if DISABLED(ENDSTOPPULLUPS)
+   // Disable ENDSTOPPULLUPS to set pullups individually
+   //#define ENDSTOPPULLUP_XMIN
+   //#define ENDSTOPPULLUP_YMIN
+-  //#define ENDSTOPPULLUP_ZMIN
++  #define ENDSTOPPULLUP_ZMIN  // Board v301 Configs
+   //#define ENDSTOPPULLUP_IMIN
+   //#define ENDSTOPPULLUP_JMIN
+   //#define ENDSTOPPULLUP_KMIN
+@@ -1241,7 +1241,7 @@
+   //#define ENDSTOPPULLUP_UMAX
+   //#define ENDSTOPPULLUP_VMAX
+   //#define ENDSTOPPULLUP_WMAX
+-  //#define ENDSTOPPULLUP_ZMIN_PROBE
++  #define ENDSTOPPULLUP_ZMIN_PROBE  // Board v301 Configs
+ #endif
+ 
+ // Enable pulldown for all endstops to prevent a floating state
+@@ -1273,11 +1273,11 @@
+  * Endstop "Hit" State
+  * Set to the state (HIGH or LOW) that applies to each endstop.
+  */
+-#define X_MIN_ENDSTOP_HIT_STATE HIGH
++#define X_MIN_ENDSTOP_HIT_STATE LOW  // Board v301 Configs
+ #define X_MAX_ENDSTOP_HIT_STATE HIGH
+-#define Y_MIN_ENDSTOP_HIT_STATE HIGH
++#define Y_MIN_ENDSTOP_HIT_STATE LOW  // Board v301 Configs
+ #define Y_MAX_ENDSTOP_HIT_STATE HIGH
+-#define Z_MIN_ENDSTOP_HIT_STATE HIGH
++#define Z_MIN_ENDSTOP_HIT_STATE HIGH  // Board v301 Configs
+ #define Z_MAX_ENDSTOP_HIT_STATE HIGH
+ #define I_MIN_ENDSTOP_HIT_STATE HIGH
+ #define I_MAX_ENDSTOP_HIT_STATE HIGH
+@@ -1339,7 +1339,7 @@
+  * Override with M92 (when enabled below)
+  *                                      X, Y, Z [, I [, J [, K...]]], E0 [, E1[, E2...]]
+  */
+-#define DEFAULT_AXIS_STEPS_PER_UNIT   { 80, 80, 400, 93 }  // Ender Configs
++#define DEFAULT_AXIS_STEPS_PER_UNIT   { 80, 80, 400, 424.9 }  // Ender Configs
+ 
+ #define LIMITED_MAX_STEPS_EDITING
+ #if ENABLED(LIMITED_MAX_STEPS_EDITING)
+@@ -1400,9 +1400,9 @@
+  */
+ //#define CLASSIC_JERK  // Enable JUNCTION DEVIATION
+ #if ENABLED(CLASSIC_JERK)
+-  #define DEFAULT_XJERK 8.0  // Ender Configs
+-  #define DEFAULT_YJERK 8.0  // Ender Configs
+-  #define DEFAULT_ZJERK  0.4  // Ender Configs
++  #define DEFAULT_XJERK 5.0  // Ender Configs
++  #define DEFAULT_YJERK 5.0  // Ender Configs
++  #define DEFAULT_ZJERK  0.3  // Ender Configs
+   #define DEFAULT_EJERK  5.0  // Ender Configs
+   //#define DEFAULT_IJERK  0.3
+   //#define DEFAULT_JJERK  0.3
+@@ -1440,7 +1440,7 @@
+  *
+  * See https://github.com/synthetos/TinyG/wiki/Jerk-Controlled-Motion-Explained
+  */
+-#define S_CURVE_ACCELERATION  // MRiscoC Enabled
++//#define S_CURVE_ACCELERATION  // MRiscoC Enabled
+ #if ENABLED(S_CURVE_ACCELERATION)
+   // Define to use 4th instead of 6th order motion curve
+   //#define S_CURVE_FACTOR 0.25    // Initial and final acceleration factor, ideally 0.1 to 0.4.
+@@ -1461,10 +1461,10 @@
+  * The probe replaces the Z-MIN endstop and is used for Z homing.
+  * (Automatically enables USE_PROBE_FOR_Z_HOMING.)
+  */
+-//#define Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN  // Manual mesh not have a probe
++//#define Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN  // Probe connected to BLTouch port
+ 
+ // Force the use of the probe for Z-axis homing
+-//#define USE_PROBE_FOR_Z_HOMING  // Manual mesh not have a probe
++#define USE_PROBE_FOR_Z_HOMING
+ 
+ /**
+  * Z_MIN_PROBE_PIN
+@@ -1493,7 +1493,7 @@
+  * Use G29 repeatedly, adjusting the Z height at each point with movement commands
+  * or (with LCD_BED_LEVELING) the LCD controller.
+  */
+-#define PROBE_MANUALLY  // Manual mesh version
++//#define PROBE_MANUALLY
+ 
+ /**
+  * A Fix-Mounted Probe either doesn't deploy or needs manual deployment.
+@@ -1521,7 +1521,7 @@
+ /**
+  * The BLTouch probe uses a Hall effect sensor and emulates a servo.
+  */
+-//#define BLTOUCH
++#define BLTOUCH  // 3D/CR/BLTouch version
+ 
+ /**
+  * MagLev V4 probe by MDD
+@@ -1710,7 +1710,7 @@
+  *     |    [-]    |
+  *     O-- FRONT --+
+  */
+-#define NOZZLE_TO_PROBE_OFFSET { 0, 0, 0 } // (mm) X, Y, Z distance from Nozzle tip to Probe trigger-point  // MRiscoC BLTouch offset for support: https://www.thingiverse.com/thing:4605354 (z-offset = -1.80 mm)  // Manual mesh use the nozzle as probe
++#define NOZZLE_TO_PROBE_OFFSET { -31.8, -40.5, 0 } // (mm) X, Y, Z distance from Nozzle tip to Probe trigger-point  // Ender3S1 Configs
+ 
+ // Enable and set to use a specific tool for probing. Disable to allow any tool.
+ #define PROBING_TOOL 0
+@@ -1780,8 +1780,8 @@
+  * A total of 2 does fast/slow probes with a weighted average.
+  * A total of 3 or more adds more slow probes, taking the average.
+  */
+-//#define MULTIPLE_PROBING 2
+-//#define EXTRA_PROBING    1
++#define MULTIPLE_PROBING 2
++#define EXTRA_PROBING    1
+ 
+ /**
+  * Z probes require clearance when deploying, stowing, and moving between
+@@ -1797,13 +1797,13 @@
+  * Example: 'M851 Z-5' with a CLEARANCE of 4  =>  9mm from bed to nozzle.
+  *     But: 'M851 Z+1' with a CLEARANCE of 2  =>  2mm from bed to nozzle.
+  */
+-#define Z_CLEARANCE_DEPLOY_PROBE   10 // (mm) Z Clearance for Deploy/Stow
+-#define Z_CLEARANCE_BETWEEN_PROBES  5 // (mm) Z Clearance between probe points
+-#define Z_CLEARANCE_MULTI_PROBE     5 // (mm) Z Clearance between multiple probes
++#define Z_CLEARANCE_DEPLOY_PROBE   5 // (mm) Z Clearance for Deploy/Stow  // MRiscoC Increase speed
++#define Z_CLEARANCE_BETWEEN_PROBES  5 // (mm) Z Clearance between probe points  // MRiscoC Increase probe compatibility
++#define Z_CLEARANCE_MULTI_PROBE     5 // (mm) Z Clearance between multiple probes  // MRiscoC Increase speed
+ #define Z_PROBE_ERROR_TOLERANCE     3 // (mm) Tolerance for early trigger (<= -probe.offset.z + ZPET)
+ //#define Z_AFTER_PROBING           5 // (mm) Z position after probing is done
+ 
+-#define Z_PROBE_LOW_POINT          -2 // (mm) Farthest distance below the trigger-point to go before stopping
++#define Z_PROBE_LOW_POINT          -3 // (mm) Farthest distance below the trigger-point to go before stopping  // MRiscoC allows reach lower points
+ 
+ // For M851 provide ranges for adjusting the X, Y, and Z probe offsets
+ #define PROBE_OFFSET_XMIN -100   // (mm)  // MRiscoC increase compatibility with some extruder/probe combinations
+@@ -1814,7 +1814,7 @@
+ //#define PROBE_OFFSET_ZMAX  20   // (mm)
+ 
+ // Enable the M48 repeatability test to test probe accuracy
+-//#define Z_MIN_PROBE_REPEATABILITY_TEST
++#define Z_MIN_PROBE_REPEATABILITY_TEST  // MRiscoC Enable M48 repeatability test
+ 
+ // Before deploy/stow pause for user confirmation
+ //#define PAUSE_BEFORE_DEPLOY_STOW
+@@ -1834,10 +1834,10 @@
+   //#define WAIT_FOR_BED_HEATER     // Wait for bed to heat back up between probes (to improve accuracy)
+   //#define WAIT_FOR_HOTEND         // Wait for hotend to heat back up between probes (to improve accuracy & prevent cold extrude)
+ #endif
+-//#define PROBING_FANS_OFF          // Turn fans off when probing
++#define PROBING_FANS_OFF          // Turn fans off when probing  // MRiscoC Turn fans off for avoid vibrations and interference
+ //#define PROBING_ESTEPPERS_OFF     // Turn all extruder steppers off when probing
+ //#define PROBING_STEPPERS_OFF      // Turn all steppers off (unless needed to hold position) when probing (including extruders)
+-//#define DELAY_BEFORE_PROBING 200  // (ms) To prevent vibrations from triggering piezo sensors
++#define DELAY_BEFORE_PROBING 200  // (ms) To prevent vibrations from triggering piezo sensors  // MRiscoC Wait for stability
+ 
+ // Require minimum nozzle and/or bed temperature for probing
+ //#define PREHEAT_BEFORE_PROBING
+@@ -1916,7 +1916,7 @@
+ //#define Z_CLEARANCE_FOR_HOMING  10   // (mm) Minimal Z height before homing (G28) for Z clearance above the bed, clamps, ...  // MRiscoC Crearance over the bed
+                                       // You'll need this much clearance above Z_MAX_POS to avoid grinding.
+ 
+-#define Z_AFTER_HOMING         5   // (mm) Height to move to after homing (if Z was homed)  // MRiscoC Crearance over the bed
++//#define Z_AFTER_HOMING         5   // (mm) Height to move to after homing (if Z was homed)  // MRiscoC Crearance over the bed
+ //#define XY_AFTER_HOMING { 10, 10 }  // (mm) Move to an XY position after homing (and raising Z)
+ 
+ //#define EVENT_GCODE_AFTER_HOMING "M300 P440 S200"  // Commands to run after G28 (and move to XY_AFTER_HOMING)
+@@ -1951,16 +1951,16 @@
+ // @section geometry
+ 
+ // The size of the printable area
+-#define X_BED_SIZE 230  // MRiscoC Max usable bed size
+-#define Y_BED_SIZE 230  // MRiscoC Max usable bed size
++#define X_BED_SIZE 220  // MRiscoC Max usable bed size
++#define Y_BED_SIZE 220  // MRiscoC Max usable bed size
+ 
+ // Travel limits (linear=mm, rotational=°) after homing, corresponding to endstop positions.
+-#define X_MIN_POS 0  // MRiscoC Stock physical limit
+-#define Y_MIN_POS 0  // MRiscoC Stock physical limit
++#define X_MIN_POS -10  // MRiscoC Stock physical limit
++#define Y_MIN_POS -8  // MRiscoC Stock physical limit
+ #define Z_MIN_POS 0
+-#define X_MAX_POS 248  // MRiscoC Stock physical limit
+-#define Y_MAX_POS 231  // MRiscoC Stock physical limit
+-#define Z_MAX_POS 250  // Ender Configs
++#define X_MAX_POS 230  // MRiscoC Stock physical limit
++#define Y_MAX_POS 220  // MRiscoC Stock physical limit
++#define Z_MAX_POS 270  // Ender Configs
+ //#define I_MIN_POS 0
+ //#define I_MAX_POS 50
+ //#define J_MIN_POS 0
+@@ -2035,9 +2035,9 @@
+   #define FIL_RUNOUT_ENABLED_DEFAULT false // Enable the sensor on startup. Override with M412 followed by M500.
+   #define NUM_RUNOUT_SENSORS   1          // Number of sensors, up to one per extruder. Define a FIL_RUNOUT#_PIN for each.
+ 
+-  #define FIL_RUNOUT_STATE     LOW        // Pin state indicating that filament is NOT present.
+-  #define FIL_RUNOUT_PULLUP               // Use internal pullup for filament runout pins.
+-  //#define FIL_RUNOUT_PULLDOWN           // Use internal pulldown for filament runout pins.
++  #define FIL_RUNOUT_STATE     HIGH        // Pin state indicating that filament is NOT present.  // Board v301 Configs
++  //#define FIL_RUNOUT_PULLUP               // Use internal pullup for filament runout pins.  // Board v301 Configs
++  #define FIL_RUNOUT_PULLDOWN           // Use internal pulldown for filament runout pins.  // Board v301 Configs
+   //#define WATCH_ALL_RUNOUT_SENSORS      // Execute runout script on any triggering sensor, not only for the active extruder.
+                                           // This is automatically enabled for MIXING_EXTRUDERs.
+ 
+@@ -2082,7 +2082,7 @@
+   // After a runout is detected, continue printing this length of filament
+   // before executing the runout script. Useful for a sensor at the end of
+   // a feed tube. Requires 4 bytes SRAM per sensor, plus 4 bytes overhead.
+-  #define FILAMENT_RUNOUT_DISTANCE_MM 25  // MRiscoC Customizable by menu
++  #define FILAMENT_RUNOUT_DISTANCE_MM 200  // MRiscoC Customizable by menu
+ 
+   #ifdef FILAMENT_RUNOUT_DISTANCE_MM
+     // Enable this option to use an encoder disc that toggles the runout pin
+@@ -2176,9 +2176,9 @@
+  */
+ //#define AUTO_BED_LEVELING_3POINT
+ //#define AUTO_BED_LEVELING_LINEAR
+-//#define AUTO_BED_LEVELING_BILINEAR
+-//#define AUTO_BED_LEVELING_UBL
+-#define MESH_BED_LEVELING  // Manual Mesh
++//#define AUTO_BED_LEVELING_BILINEAR  // MRiscoC BLTouch auto level  // Disabled for UBL
++#define AUTO_BED_LEVELING_UBL  // MRiscoC UBL
++//#define MESH_BED_LEVELING
+ 
+ /**
+  * Commands to execute at the start of G29 probing,
+@@ -2205,7 +2205,7 @@
+  */
+ #define PREHEAT_BEFORE_LEVELING  // MRiscoC Heatting to compensate thermal expansions
+ #if ENABLED(PREHEAT_BEFORE_LEVELING)
+-  #define LEVELING_NOZZLE_TEMP 175   // (°C) Only applies to E0 at this time  // Preheat nozzle without oozing
++  #define LEVELING_NOZZLE_TEMP   0   // (°C) Only applies to E0 at this time  // MRiscoC No necessary for BLTouch
+   #define LEVELING_BED_TEMP     50
+ #endif
+ 
+@@ -2275,10 +2275,10 @@
+     // Subdivision of the grid by Catmull-Rom method.
+     // Synthesizes intermediate points to produce a more detailed mesh.
+     //
+-    //#define ABL_BILINEAR_SUBDIVISION
++    //#define ABL_BILINEAR_SUBDIVISION  // Original Ender3S1 Configs set this to Enable
+     #if ENABLED(ABL_BILINEAR_SUBDIVISION)
+       // Number of subdivisions between probe points
+-      #define BILINEAR_SUBDIVISIONS 3
++      #define BILINEAR_SUBDIVISIONS 5  // Ender3S1 Configs
+     #endif
+ 
+   #endif
+@@ -2291,8 +2291,8 @@
+ 
+   //#define MESH_EDIT_GFX_OVERLAY   // Display a graphics overlay while editing the mesh
+ 
+-  #define MESH_INSET 25              // Set Mesh bounds as an inset region of the bed  // MRiscoC Center mesh
+-  #define GRID_MAX_POINTS_X 5      // Don't use more than 15 points per axis, implementation limited.  // MRiscoC Customizable by menu
++  #define MESH_INSET 38              // Set Mesh bounds as an inset region of the bed  // MRiscoC Center mesh
++  #define GRID_MAX_POINTS_X 7      // Don't use more than 15 points per axis, implementation limited.  // MRiscoC Customizable by menu
+   #define GRID_MAX_POINTS_Y GRID_MAX_POINTS_X
+ 
+   //#define UBL_HILBERT_CURVE       // Use Hilbert distribution for less travel when probing multiple points
+@@ -2301,7 +2301,7 @@
+   //#define UBL_TILT_ON_MESH_POINTS_3POINT  // Use nearest mesh points with G29 J0 (3-point)
+ 
+   #define UBL_MESH_EDIT_MOVES_Z     // Sophisticated users prefer no movement of nozzle
+-  #define UBL_SAVE_ACTIVE_ON_M500   // Save the currently active mesh in the current slot on M500
++  //#define UBL_SAVE_ACTIVE_ON_M500   // Save the currently active mesh in the current slot on M500  // Disabled for AML compatibility
+ 
+   //#define UBL_Z_RAISE_WHEN_OFF_MESH 2.5 // When the nozzle is off the mesh, this value is used
+                                           // as the Z-Height correction value.
+@@ -2333,7 +2333,7 @@
+   //=================================== Mesh ==================================
+   //===========================================================================
+ 
+-  #define MESH_INSET 25          // Set Mesh bounds as an inset region of the bed  // MRiscoC Center mesh
++  #define MESH_INSET 38          // Set Mesh bounds as an inset region of the bed  // MRiscoC Center mesh
+   #define GRID_MAX_POINTS_X 5  // MRiscoC Customizable by menu
+   #define GRID_MAX_POINTS_Y GRID_MAX_POINTS_X
+ 
+@@ -2361,9 +2361,9 @@
+   #define BED_TRAMMING_HEIGHT      0.0        // (mm) Z height of nozzle at tramming points
+   #define BED_TRAMMING_Z_HOP       5.0        // (mm) Z raise between tramming points
+   //#define BED_TRAMMING_INCLUDE_CENTER       // Move to the center after the last corner
+-  //#define BED_TRAMMING_USE_PROBE
++  #define BED_TRAMMING_USE_PROBE  // Use a probe if it is available
+   #if ENABLED(BED_TRAMMING_USE_PROBE)
+-    #define BED_TRAMMING_PROBE_TOLERANCE 0.1  // (mm)
++    #define BED_TRAMMING_PROBE_TOLERANCE 0.05  // (mm)  // ProUI bed tramming wizard tolerance
+     #define BED_TRAMMING_VERIFY_RAISED        // After adjustment triggers the probe, re-probe to verify
+     //#define BED_TRAMMING_AUDIO_FEEDBACK
+   #endif
+@@ -2412,7 +2412,7 @@
+  * - Allows Z homing only when XY positions are known and trusted.
+  * - If stepper drivers sleep, XY homing may be required again before Z homing.
+  */
+-//#define Z_SAFE_HOMING
++#define Z_SAFE_HOMING  // MRiscoC Homing Z at center of bed
+ 
+ #if ENABLED(Z_SAFE_HOMING)
+   #define Z_SAFE_HOMING_X_POINT X_CENTER  // (mm) X point for Z homing
+@@ -2459,7 +2459,7 @@
+  *    +-------------->X     +-------------->X     +-------------->Y
+  *     XY_SKEW_FACTOR        XZ_SKEW_FACTOR        YZ_SKEW_FACTOR
+  */
+-//#define SKEW_CORRECTION
++#define SKEW_CORRECTION
+ 
+ #if ENABLED(SKEW_CORRECTION)
+   // Input all length measurements here:
+@@ -2484,7 +2484,7 @@
+   #endif
+ 
+   // Enable this option for M852 to set skew at runtime
+-  //#define SKEW_CORRECTION_GCODE
++  #define SKEW_CORRECTION_GCODE
+ #endif
+ 
+ //=============================================================================
+@@ -2504,11 +2504,11 @@
+  */
+ #define EEPROM_SETTINGS     // Persistent storage with M500 and M501  // Ender Configs
+ //#define DISABLE_M503        // Saves ~2700 bytes of flash. Disable for release!
+-#define EEPROM_CHITCHAT       // Give feedback on EEPROM commands. Disable to save flash.
++//#define EEPROM_CHITCHAT       // Give feedback on EEPROM commands. Disable to save flash.
+ #define EEPROM_BOOT_SILENT    // Keep M503 quiet and only give errors during first load
+ #if ENABLED(EEPROM_SETTINGS)
+   #define EEPROM_AUTO_INIT  // Init EEPROM automatically on any errors.  // Ender Configs
+-  #define EEPROM_INIT_NOW   // Init EEPROM on first boot after a new build.  // MRiscoC Reset EEPROM on first boot
++  //#define EEPROM_INIT_NOW   // Init EEPROM on first boot after a new build.  // MRiscoC Reset EEPROM on first boot
+ #endif
+ 
+ // @section host
+@@ -2579,7 +2579,7 @@
+ 
+ #if ENABLED(NOZZLE_PARK_FEATURE)
+   // Specify a park position as { X, Y, Z_raise }
+-  #define NOZZLE_PARK_POINT { (X_BED_SIZE + 10), (Y_MAX_POS - 10), 20 }
++  #define NOZZLE_PARK_POINT { (X_MAX_POS - 2), (Y_MAX_POS - 2), 20 }
+   #define NOZZLE_PARK_MOVE          0   // Park motion: 0 = XY Move, 1 = X Only, 2 = Y Only, 3 = X before Y, 4 = Y before X
+   #define NOZZLE_PARK_Z_RAISE_MIN   0   // (mm) Always raise Z by at least this distance  // MRiscoC uses Park Z Raise from 0 to avoid backlash issues
+   #define NOZZLE_PARK_XY_FEEDRATE 100   // (mm/s) X and Y axes feedrate (also used for delta Z axis)
+@@ -2624,7 +2624,7 @@
+  *
+  *   Caveats: The ending Z should be the same as starting Z.
+  */
+-//#define NOZZLE_CLEAN_FEATURE
++#define NOZZLE_CLEAN_FEATURE
+ 
+ #if ENABLED(NOZZLE_CLEAN_FEATURE)
+   #define NOZZLE_CLEAN_PATTERN_LINE     // Provide 'G12 P0' - a simple linear cleaning pattern
+@@ -3570,6 +3570,7 @@
+ //
+ //#define DWIN_CREALITY_LCD           // Creality UI
+ #define DWIN_LCD_PROUI              // Pro UI by MRiscoC
++#define DACAI_DISPLAY
+ #define USE_STOCK_DWIN_SET
+ 
+ // Professional firmware features:
+@@ -3587,7 +3588,7 @@
+ #if ENABLED(DWIN_LCD_PROUI)
+   #if PROUI_EX
+     #if ENABLED(LCD_BED_TRAMMING)
+-      //#define HAS_TRAMMING_WIZARD 1  // Manual mesh not have a probe
++      #define HAS_TRAMMING_WIZARD 1
+     #endif
+     #define HAS_GCODE_PREVIEW 1
+     #define HAS_TOOLBAR 1
+diff --git a/Marlin/Configuration_adv.h b/Marlin/Configuration_adv.h
+index 06d2c60..438e8f9 100644
+--- a/Marlin/Configuration_adv.h
++++ b/Marlin/Configuration_adv.h
+@@ -621,7 +621,7 @@
+  * gets it spinning reliably for a short time before setting the requested speed.
+  * (Does not work on Sanguinololu with FAN_SOFT_PWM.)
+  */
+-//#define FAN_KICKSTART_TIME  100  // (ms)
++#define FAN_KICKSTART_TIME  100  // (ms)
+ //#define FAN_KICKSTART_POWER 180  // 64-255
+ //#define FAN_KICKSTART_LINEAR     // Set kickstart time linearly based on the speed, e.g., for 20% (51) it will be FAN_KICKSTART_TIME * 0.2.
+                                    // Useful for quick speed up to low speed. Kickstart power must be set to 255.
+@@ -702,7 +702,7 @@
+  * Multiple extruders can be assigned to the same pin in which case
+  * the fan will turn on when any selected extruder is above the threshold.
+  */
+-#define E0_AUTO_FAN_PIN -1  // Ender3V2 Configs
++#define E0_AUTO_FAN_PIN FAN1_PIN  // Board v301 Configs
+ #define E1_AUTO_FAN_PIN -1
+ #define E2_AUTO_FAN_PIN -1
+ #define E3_AUTO_FAN_PIN -1
+@@ -1024,13 +1024,13 @@
+    *
+    * Set the default state here, change with 'M401 S' or UI, use M500 to save, M502 to reset.
+    */
+-  //#define BLTOUCH_HS_MODE true
++  #define BLTOUCH_HS_MODE true
+ 
+   #ifdef BLTOUCH_HS_MODE
+     // The probe Z offset (M851 Z) is the height at which the probe triggers.
+     // This must be large enough to keep the probe pin off the bed and prevent
+     // it from snagging on the bed clips.
+-    #define BLTOUCH_HS_EXTRA_CLEARANCE    7 // Extra Z Clearance
++    #define BLTOUCH_HS_EXTRA_CLEARANCE    0 // Extra Z Clearance
+   #endif
+ 
+ #endif // BLTOUCH
+@@ -1258,9 +1258,9 @@
+  *
+  * Tune with M593 D<factor> F<frequency>
+  */
+-//#define INPUT_SHAPING_X
+-//#define INPUT_SHAPING_Y
+-//#define INPUT_SHAPING_Z
++#define INPUT_SHAPING_X
++#define INPUT_SHAPING_Y
++#define INPUT_SHAPING_Z
+ #if ANY(INPUT_SHAPING_X, INPUT_SHAPING_Y, INPUT_SHAPING_Z)
+   #if ENABLED(INPUT_SHAPING_X)
+     #define SHAPING_FREQ_X  40.0        // (Hz) The default dominant resonant frequency on the X axis.
+@@ -1276,7 +1276,7 @@
+   #endif
+   //#define SHAPING_MIN_FREQ  20.0      // (Hz) By default the minimum of the shaping frequencies. Override to affect SRAM usage.
+   //#define SHAPING_MAX_STEPRATE 10000  // By default the maximum total step rate of the shaped axes. Override to affect SRAM usage.
+-  //#define SHAPING_MENU                // Add a menu to the LCD to set shaping parameters.
++  #define SHAPING_MENU                // Add a menu to the LCD to set shaping parameters.
+ #endif
+ 
+ // @section motion
+@@ -2004,11 +2004,11 @@
+   //#define CONFIGURATION_EMBEDDING
+ 
+   // Add an optimized binary file transfer mode, initiated with 'M28 B1'
+-  #define BINARY_FILE_TRANSFER  // MRiscoC Enabled for easy firmware upgrade
++  #define BINARY_FILE_TRANSFER  // MRiscoC Enabled for easy firmware upgrade  // MarlinBFT: re-enabled after 301F1 board json disables it (allows firmware upload via OctoPrint Firmware Updater)
+ 
+   #if ENABLED(BINARY_FILE_TRANSFER)
+     // Include extra facilities (e.g., 'M20 F') supporting firmware upload via BINARY_FILE_TRANSFER
+-    #define CUSTOM_FIRMWARE_UPLOAD  // MRiscoC Enabled for easy firmware upgrade
++    #define CUSTOM_FIRMWARE_UPLOAD  // MRiscoC Enabled for easy firmware upgrade  // MarlinBFT: reboot-to-install support for firmware upload via binary file transfer
+   #endif
+ 
+   // "Over-the-air" Firmware Update with M936 - Required to set EEPROM flag
+@@ -2373,7 +2373,7 @@
+  */
+ #define BABYSTEPPING  // Ender Configs
+ #if ENABLED(BABYSTEPPING)
+-  //#define EP_BABYSTEPPING                 // M293/M294 babystepping with EMERGENCY_PARSER support
++  #define EP_BABYSTEPPING                 // M293/M294 babystepping with EMERGENCY_PARSER support
+   #define BABYSTEP_WITHOUT_HOMING  // MRiscoC Enabled BbS without home
+   #define BABYSTEP_ALWAYS_AVAILABLE       // Allow babystepping at all times (not just during movement)  // MRiscoC Active BbS always
+   //#define BABYSTEP_XY                     // Also enable X/Y Babystepping. Not supported on DELTA!
+@@ -2394,7 +2394,7 @@
+ 
+   //#define BABYSTEP_DISPLAY_TOTAL          // Display total babysteps since last G28
+ 
+-  //#define BABYSTEP_ZPROBE_OFFSET          // Combine M851 Z and Babystepping
++  #define BABYSTEP_ZPROBE_OFFSET          // Combine M851 Z and Babystepping
+   #if ENABLED(BABYSTEP_ZPROBE_OFFSET)
+     //#define BABYSTEP_HOTEND_Z_OFFSET      // For multiple hotends, babystep relative Z offsets
+     //#define BABYSTEP_GFX_OVERLAY          // Enable graphical overlay on Z-offset editor
+@@ -2418,13 +2418,13 @@
+  *
+  * See https://marlinfw.org/docs/features/lin_advance.html for full instructions.
+  */
+-//#define LIN_ADVANCE
++#define LIN_ADVANCE
+ 
+ #if ANY(LIN_ADVANCE, FT_MOTION)
+   #if ENABLED(DISTINCT_E_FACTORS)
+     #define ADVANCE_K { 0.22 }    // (mm) Compression length per 1mm/s extruder speed, per extruder. Override with 'M900 T<tool> K<mm>'.
+   #else
+-    #define ADVANCE_K 0.22        // (mm) Compression length for all extruders. Override with 'M900 K<mm>'.
++    #define ADVANCE_K 0.0        // (mm) Compression length for all extruders. Override with 'M900 K<mm>'.
+   #endif
+   //#define ADVANCE_K_EXTRA       // Add a second linear advance constant, configurable with 'M900 L'.
+ #endif
+@@ -2433,7 +2433,7 @@
+   //#define LA_DEBUG              // Print debug information to serial during operation. Disable for production use.
+   //#define EXPERIMENTAL_I2S_LA   // Allow I2S_STEPPER_STREAM to be used with LA. Performance degrades as the LA step rate reaches ~20kHz.
+ 
+-  //#define SMOOTH_LIN_ADVANCE    // Remove limits on acceleration by gradual increase of nozzle pressure
++  #define SMOOTH_LIN_ADVANCE    // Remove limits on acceleration by gradual increase of nozzle pressure
+   #if ENABLED(SMOOTH_LIN_ADVANCE)
+     /**
+      * ADVANCE_TAU is also the time ahead that the smoother needs to look
+@@ -2459,7 +2459,7 @@
+  * underextrusion at high extruder speeds that are otherwise well-behaved (i.e., not skipping).
+  * For better results also enable ADAPTIVE_STEP_SMOOTHING.
+  */
+-//#define NONLINEAR_EXTRUSION
++#define NONLINEAR_EXTRUSION
+ #if ENABLED(NONLINEAR_EXTRUSION)
+   //#define NONLINEAR_EXTRUSION_DEFAULT_ON    // Enable if NLE should be ON by default
+ #endif
+@@ -2519,21 +2519,21 @@
+ 
+ #if ANY(MESH_BED_LEVELING, AUTO_BED_LEVELING_UBL)
+   // Override the mesh area if the automatic (max) area is too large
+-  #define MESH_MIN_X MESH_INSET
+-  #define MESH_MIN_Y MESH_INSET
+-  #define MESH_MAX_X X_BED_SIZE - (MESH_INSET)
+-  #define MESH_MAX_Y Y_BED_SIZE - (MESH_INSET)
++  #define MESH_MIN_X 10
++  #define MESH_MIN_Y 10
++  #define MESH_MAX_X 195
++  #define MESH_MAX_Y 175
+ #endif
+ 
+ #if ALL(AUTO_BED_LEVELING_UBL, EEPROM_SETTINGS)
+-  //#define OPTIMIZED_MESH_STORAGE  // Store mesh with less precision to save EEPROM space
++  #define OPTIMIZED_MESH_STORAGE  // Store mesh with less precision to save EEPROM space
+ #endif
+ 
+ /**
+  * Repeatedly attempt G29 leveling until it succeeds.
+  * Stop after G29_MAX_RETRIES attempts.
+  */
+-//#define G29_RETRY_AND_RECOVER
++//#define G29_RETRY_AND_RECOVER  // Disabled for UBL
+ #if ENABLED(G29_RETRY_AND_RECOVER)
+   #define G29_MAX_RETRIES 3
+   #define G29_HALT_ON_FAILURE
+@@ -2734,7 +2734,7 @@
+ #if ALL(HAS_MEDIA, DIRECT_STEPPING)
+   #define BLOCK_BUFFER_SIZE  8
+ #elif HAS_MEDIA
+-  #define BLOCK_BUFFER_SIZE 16
++  #define BLOCK_BUFFER_SIZE 32
+ #else
+   #define BLOCK_BUFFER_SIZE 16
+ #endif
+@@ -2743,7 +2743,7 @@
+ 
+ // The ASCII buffer for serial input
+ #define MAX_CMD_SIZE 96
+-#define BUFSIZE 16  // MRiscoC Increase buffer for Octoprint
++#define BUFSIZE 32  // MRiscoC Increase buffer for Octoprint
+ 
+ /**
+  * Host Transmit Buffer Size
+@@ -2762,7 +2762,7 @@
+  * To use flow control, set this buffer size to at least 1024 bytes.
+  * :[0, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048]
+  */
+-//#define RX_BUFFER_SIZE 1024
++#define RX_BUFFER_SIZE 512
+ 
+ #if RX_BUFFER_SIZE >= 1024
+   // Enable to have the controller send XON/XOFF control characters to
+@@ -2886,7 +2886,7 @@
+     #define MIN_AUTORETRACT             0.1 // (mm) Don't convert E moves under this length
+     #define MAX_AUTORETRACT            10.0 // (mm) Don't convert E moves over this length
+   #endif
+-  #define RETRACT_LENGTH                5   // (mm) Default retract length (positive value)  // MRiscoC Bowden
++  #define RETRACT_LENGTH                1   // (mm) Default retract length (positive value)  // MRiscoC Directdrive
+   #define RETRACT_LENGTH_SWAP          13   // (mm) Default swap retract length (positive value)
+   #define RETRACT_FEEDRATE             40   // (mm/s) Default feedrate for retracting  // MRiscoC Bowden
+   #define RETRACT_ZRAISE                0.2   // (mm) Default retract Z-raise  // MRiscoC Bowden
+@@ -4149,12 +4149,12 @@
+  * and M820 to report the current set of macros.
+  * Macros are not saved to EEPROM unless enabled below.
+  */
+-//#define GCODE_MACROS
++#define GCODE_MACROS
+ #if ENABLED(GCODE_MACROS)
+   #define GCODE_MACROS_SLOTS       5  // Up to 10 may be used
+   #define GCODE_MACROS_SLOT_SIZE  50  // Maximum length of a single macro
+   #if ENABLED(EEPROM_SETTINGS)
+-    //#define GCODE_MACROS_IN_EEPROM  // Include macros in EEPROM
++    #define GCODE_MACROS_IN_EEPROM  // Include macros in EEPROM
+   #endif
+ #endif
+ 
+@@ -4294,7 +4294,7 @@
+   //#define HOST_PAUSE_M76                // Tell the host to pause in response to M76
+   #define HOST_PROMPT_SUPPORT           // Initiate host prompts to get user feedback  // MRiscoC Enabled responses from host
+   #if ENABLED(HOST_PROMPT_SUPPORT)
+-    //#define HOST_STATUS_NOTIFICATIONS   // Send some status messages to the host as notifications
++    #define HOST_STATUS_NOTIFICATIONS   // Send some status messages to the host as notifications
+   #endif
+   //#define HOST_START_MENU_ITEM          // Add a menu item that tells the host to start
+   //#define HOST_SHUTDOWN_MENU_ITEM       // Add a menu item that tells the host to shut down
+diff --git a/Marlin/Version.h b/Marlin/Version.h
+index c713e88..eac58d9 100644
+--- a/Marlin/Version.h
++++ b/Marlin/Version.h
+@@ -37,7 +37,7 @@
+ #if ENABLED(IS_DEMO)
+   #define DETAILED_BUILD_VERSION SHORT_BUILD_VERSION " DEMO, NOT FOR PRODUCTION"
+ #else
+-  #define DETAILED_BUILD_VERSION SHORT_BUILD_VERSION " Ender3V2-422-MM, based on bugfix-2.1.x"
++  #define DETAILED_BUILD_VERSION SHORT_BUILD_VERSION " Ender3S1-F1-v2, based on bugfix-2.1.x"
+ #endif
+ 
+ /**
+@@ -60,7 +60,7 @@
+ /**
+  * Defines a generic printer name to be output to the LCD after booting Marlin.
+  */
+-#define MACHINE_NAME "Ender 3V2"
++#define MACHINE_NAME "Ender 3S1"
+ 
+ /**
+  * The SOURCE_CODE_URL is the location where users will find the Marlin Source

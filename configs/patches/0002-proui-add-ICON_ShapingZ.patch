@@ -1,0 +1,12 @@
+diff --git a/Marlin/src/lcd/dwin/proui/dwinui.h b/Marlin/src/lcd/dwin/proui/dwinui.h
+index 464aae0..10d2d1e 100644
+--- a/Marlin/src/lcd/dwin/proui/dwinui.h
++++ b/Marlin/src/lcd/dwin/proui/dwinui.h
+@@ -155,6 +155,7 @@
+ #define ICON_SetPreheat10      CI(1,ICON_SetCustomPreheat)
+ #define ICON_ShapingX          CI(1,ICON_MoveX)
+ #define ICON_ShapingY          CI(1,ICON_MoveY)
++#define ICON_ShapingZ          CI(1,ICON_MoveZ)  // v2 fix: missing alias required by INPUT_SHAPING_Z shaping menu
+ #define ICON_Sound             CI(1,ICON_Cool)
+ #define ICON_TBSetup           CI(1,ICON_Contact)
+ #define ICON_TMCSet            CI(1,ICON_PrintSize)

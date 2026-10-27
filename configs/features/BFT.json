@@ -1,0 +1,18 @@
+{
+"Configuration.h" : [
+],
+"Configuration_adv.h" : [
+  {
+    "op": "Enable",
+    "searchfor": "BINARY_FILE_TRANSFER",
+    "comment": "MarlinBFT: re-enabled after 301F1 board json disables it (allows firmware upload via OctoPrint Firmware Updater)"
+  },
+  {
+    "op": "Enable",
+    "searchfor": "CUSTOM_FIRMWARE_UPLOAD",
+    "comment": "MarlinBFT: reboot-to-install support for firmware upload via binary file transfer"
+  }
+],
+"Version.h" : [
+]
+}
