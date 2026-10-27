@@ -1,0 +1,42 @@
+name: build
+
+# Manual or weekly: this job downloads an ARM toolchain and compiles Marlin,
+# so it is not wired to every push. The verify workflow is the one that runs
+# on each change.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 4 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  rebuild:
+    name: rebuild from pinned upstream
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Bootstrap the pinned sources
+        run: ./scripts/bootstrap.sh
+
+      - name: Build
+        run: ./scripts/build.sh
+
+      - name: Report the flash budget
+        run: |
+          ls -l build/out/
+          grep -E "RAM:|Flash:" build/logs/build-*.log | tail -n 4
+
+      - name: Upload the image
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ender3S1-F1-v2-rebuild
+          path: build/out/*.bin
+          if-no-files-found: error

@@ -1,0 +1,39 @@
+name: verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  artifacts:
+    name: checksums, vector tables, configuration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify committed artifacts
+        run: ./scripts/verify-artifacts.sh
+      - name: Vector table detail
+        run: |
+          python3 scripts/check-vector-table.py firmware/*.bin \
+            firmware/upstream/*.bin firmware/stock/*.bin
+
+  docs:
+    name: documentation links
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check every relative link
+        run: python3 scripts/check-docs.py .
+
+  syntax:
+    name: shell syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: bash -n
+        run: for f in scripts/*.sh; do bash -n "$f"; done
