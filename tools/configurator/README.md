@@ -48,6 +48,10 @@ browser
 
 One build runs at a time. PlatformIO owns the whole tree, so two concurrent compiles would corrupt it; requests queue instead.
 
+## What it looks like when it finishes
+
+![A finished build: predicted 232,312 B, measured 232,312 B, error exact](../../docs/img/configurator-result.png)
+
 ## What is verified, and how
 
 Measured on 2026-10-27 by driving the HTTP API, not by reading code:
