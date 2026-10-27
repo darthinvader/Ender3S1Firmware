@@ -1,0 +1,28 @@
+* text=auto eol=lf
+
+# binary artifacts: never diff, never convert line endings
+*.bin  binary
+*.zlib binary
+*.zico binary
+*.ico  binary
+*.ICO  binary
+*.hzk  binary
+*.jpg  binary
+*.jpeg binary
+*.png  binary
+*.ttf  binary
+*.zip  binary
+*.rar  binary
+
+# checksums and scripts must keep LF exactly
+SHA256SUMS text eol=lf
+*.sh       text eol=lf
+*.py       text eol=lf
+
+# documentation
+*.md       text eol=lf
+
+# vendor screen assets must stay byte-exact: no eol conversion at all
+screen/mriscoc-dacai-assets/** -text
+screen/official-v3.1.9-f401/** -text
+

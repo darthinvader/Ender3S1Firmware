@@ -1,0 +1,29 @@
+# build tree created by scripts/bootstrap.sh
+/build/
+
+# compiler and linker leftovers
+*.o
+*.d
+*.a
+*.elf
+*.map
+*.su
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# editors and OS
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# scratch
+*.img
+*.iso
+/tmp/
