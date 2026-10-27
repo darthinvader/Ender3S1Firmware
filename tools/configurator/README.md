@@ -87,11 +87,13 @@ The catalogue now holds **71 features** (48 on in your build, 23 off): **66 pric
 
 ### The five that cannot be toggled here
 
+They are hidden from the page by default - a row you cannot touch is noise. Tick **Show options that cannot be used here** in the header and they reappear, greyed, with the compiler's reason next to each one. The same switch reveals the unsupported machine presets and the screen packs that pair with stock firmware, which are kept for the Ender 3 Pro work later on.
+
 | Advanced Pause Feature | required by FILAMENT_RUNOUT_SCRIPT, which uses M600: it cannot be removed on its own |
 | Nozzle Park Feature | required by ADVANCED_PAUSE_FEATURE, which is enabled: it cannot be removed on its own |
 | Fan Soft Pwm | required by this board: disabling it fails the sanity check ('FAN_SOFT_PWM is required for your board') |
 | Ccloud Print Support | does not compile on this tree: the cloud path needs print-stats globals that are configured out here |
-| Sdcard Readonly | conflicts with POWER_LOSS_RECOVERY ('Either disable SDCARD_READONLY or disable POWER_LOSS_RECOVERY'); it would also need binary file transfer off |
+| Sdcard Readonly | Marlin refuses this while power-loss recovery is on, and it also conflicts with cable flashing. It would be offered if both were off; today it is kept as a documented option, not a usable one. |
 
 ## The catalogue
 

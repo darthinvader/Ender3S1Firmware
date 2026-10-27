@@ -149,6 +149,8 @@ The catalogue now holds **{n} features** ({n_on} on in your build, {n_off} off):
 
 ### The five that cannot be toggled here
 
+They are hidden from the page by default - a row you cannot touch is noise. Tick **Show options that cannot be used here** in the header and they reappear, greyed, with the compiler's reason next to each one. The same switch reveals the unsupported machine presets and the screen packs that pair with stock firmware, which are kept for the Ender 3 Pro work later on.
+
 {blocked_rows}
 
 ## The catalogue

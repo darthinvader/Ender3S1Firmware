@@ -159,16 +159,31 @@ def main(argv) -> int:
                     auto_removed.append({"feature": other, "because": fid})
                     changed = True
 
-    # 2b. refuse selections that contain a declared conflict
-    problems = []
-    for fid, want in state.items():
+    # 2b. declared conflicts: the explicit choice wins, an ambiguity is refused
+    explicit_on = set(sel.get("on", []))
+    for fid, want in list(state.items()):
         if not want:
             continue
         for other in features[fid].get("conflicts", []):
-            if state.get(other):
-                problems.append("%s conflicts with %s" % (fid, other))
-    if problems:
-        die("selection conflicts: " + "; ".join(sorted(set(problems))))
+            if not state.get(other):
+                continue
+            if fid in explicit_on and other in explicit_on:
+                die("%s and %s were both requested, and they are mutually exclusive" % (fid, other))
+            state[other] = False
+            auto_removed.append({"feature": other, "because": fid})
+
+    # a conflict removal can orphan a dependent, so resolve requires once more
+    changed = True
+    while changed:
+        changed = False
+        for fid, want in list(state.items()):
+            if want:
+                continue
+            for other, ofeat in features.items():
+                if state.get(other) and fid in ofeat.get("requires", []):
+                    state[other] = False
+                    auto_removed.append({"feature": other, "because": fid})
+                    changed = True
 
     # 3. flip and verify
     applied = []

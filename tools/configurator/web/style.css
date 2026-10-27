@@ -78,3 +78,7 @@ em { color: var(--ink); font-style: normal; }
 .screenbox { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 12px; }
 .screenbox h3 { font-size: .9rem; margin: 0 0 8px; }
 .screenbox select { margin-bottom: 8px; }
+
+.toggle { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: .8rem;
+  color: var(--muted); text-transform: none; letter-spacing: 0; }
+.toggle input { width: auto; margin: 0; accent-color: var(--accent); }

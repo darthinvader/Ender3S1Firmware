@@ -16,6 +16,7 @@
     <label for="machine">Machine</label>
     <select id="machine"></select>
     <p id="machine-note" class="hint"></p>
+    <label class="toggle"><input type="checkbox" id="show-unavailable"> Show options that cannot be used here</label>
   </div>
 </header>
 
@@ -30,7 +31,7 @@
     <div class="presets">
       <button id="preset-now" class="preset active" title="Exactly the feature set you are running today">What I run now</button>
       <button id="preset-min" class="preset" title="Everything that can be turned off, turned off">Minimum</button>
-      <button id="preset-fit" class="preset" title="Start from what you run now and add every feature that still fits">Add what fits</button>
+      <button id="preset-fit" class="preset" title="Start from what you run now and add every measured feature that still fits">Add what fits</button>
     </div>
 
     <div class="budget">
@@ -76,6 +77,8 @@
         <tr><th>Prediction error</th><td id="r-err" class="mono"></td></tr>
         <tr><th>RAM used</th><td id="r-ram" class="mono"></td></tr>
         <tr><th>File</th><td id="r-size" class="mono"></td></tr>
+        <tr><th>Screen</th><td id="r-screen" class="mono small"></td></tr>
+        <tr><th>Bundle</th><td id="r-bundle" class="mono small"></td></tr>
         <tr><th>SHA-256</th><td id="r-sha" class="mono small"></td></tr>
         <tr><th>Changes</th><td id="r-changes" class="mono small"></td></tr>
       </table>

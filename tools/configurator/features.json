@@ -1442,7 +1442,10 @@
       ],
       "note": "the screen's PLR tune item is enabled in the shipped build and depends on this define, so turning PLR off turns the menu item off with it - SanityCheck enforces the pair",
       "measured_on": "2026-10-27",
-      "measured_against": "shipped baseline (turn off)"
+      "measured_against": "shipped baseline (turn off)",
+      "conflicts": [
+        "sdcard_readonly"
+      ]
     },
     {
       "id": "printcounter",
@@ -1482,9 +1485,10 @@
       ],
       "risk": "high",
       "buildable": false,
-      "build_failed": "conflicts with POWER_LOSS_RECOVERY ('Either disable SDCARD_READONLY or disable POWER_LOSS_RECOVERY'); it would also need binary file transfer off",
+      "build_failed": "Marlin refuses this while power-loss recovery is on, and it also conflicts with cable flashing. It would be offered if both were off; today it is kept as a documented option, not a usable one.",
       "conflicts": [
-        "bft"
+        "bft",
+        "plr"
       ]
     },
     {
