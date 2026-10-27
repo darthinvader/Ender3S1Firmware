@@ -1,0 +1,84 @@
+Send: M503
+Recv: echo:; Linear Units:
+Recv: echo:  G21 ; (mm)
+Recv: echo:; Auto Temp Control:
+Recv: echo:  M104 S0 B250 F0.00
+Recv: echo:; Temperature Units:
+Recv: echo:  M149 C ; Units in Celsius
+Recv: echo:; Filament settings (Disabled):
+Recv: echo:  M200 S0 D1.75
+Recv: echo:; Steps per unit:
+Recv: echo:  M92 X80.00 Y80.00 Z400.00 E428.00
+Recv: echo:; Max feedrates (units/s):
+Recv: echo:  M203 X300.00 Y300.00 Z5.00 E25.00
+Recv: echo:; Max Acceleration (units/s2):
+Recv: echo:  M201 X5000.00 Y5000.00 Z100.00 E1000.00
+Recv: echo:; Acceleration (units/s2) (P<print-accel> R<retract-accel> T<travel-accel>):
+Recv: echo:  M204 P1500.00 R1500.00 T3000.00
+Recv: echo:; Advanced (B<min_segment_time_us> S<min_feedrate> T<min_travel_feedrate> J<junc_dev>):
+Recv: echo:  M205 B20000.00 S0.00 T0.00 J0.02
+Recv: echo:; Unified Bed Leveling:
+Recv: echo:  M420 S0 Z10.00 ; Leveling OFF
+Recv: 
+Recv: Unified Bed Leveling System v1.01 inactive
+Recv: echo:Active Mesh Slot 0
+Recv: echo:EEPROM can hold 7 meshes.
+Recv: 
+Recv: echo:; BLTouch HS mode:
+Recv: echo:  M401 S1 ; ON
+Recv: echo:; Material heatup parameters:
+Recv: echo:  M145 S0 H195.00 B60.00 F128
+Recv: echo:  M145 S1 H240.00 B90.00 F128
+Recv: echo:  M145 S2 H230.00 B80.00 F128
+Recv: echo:  M145 S3 H190.00 B50.00 F128
+Recv: echo:; Bed PID:
+Recv: echo:  M304 P83.18 I15.04 D306.76
+Recv: echo:; Display Sleep:
+Recv: echo:  M255 S5 ; (minutes)
+Recv: echo:; LCD Brightness:
+Recv: echo:  M256 B127
+Recv: echo:; Power-loss recovery:
+Recv: echo:  M413 S0 ; OFF
+Recv: echo:; Retract (S<length> F<feedrate> Z<lift>):
+Recv: echo:  M207 S1.00 W13.00 F2400.00 Z0.20
+Recv: echo:; Recover (S<length> F<feedrate>):
+Recv: echo:  M208 S0.00 W0.00 F2400.00 R480.00
+Recv: echo:; Homing Feedrate:
+Recv: echo:  M210 X3000.00 Y3000.00 Z600.00
+Recv: echo:; Z-Probe Offset:
+Recv: echo:  M851 X-31.80 Y-40.50 Z-3.10 ; (mm)
+Recv: echo:; Input Shaping:
+Recv: echo:  M593 X F55.00 D0.15
+Recv: echo:  M593 Y F58.00 D0.15
+Recv: echo:; Hotend Idle Timeout:
+Recv: echo:  M86 B0 E0 S600 T170
+Recv: echo:; Linear Advance:
+Recv: echo:  M900 K0.08
+Recv: echo:; Filament load/unload:
+Recv: echo:  M603 L0.00 U100.00 ; (mm)
+Recv: echo:; Filament runout sensor:
+Recv: echo:  M412 S0 D200.00 ; Sensor OFF
+Recv: echo:; Model predictive control:
+Recv: echo:  M306 E0 P40.00 C13.24 R0.2164 A0.0919 F0.1053 H0.0056
+Recv: echo:; Physical minimums:
+Recv: echo:  C100 X-10 Y-8
+Recv: echo:; Physical maximums:
+Recv: echo:  C101 X230 Y220 Z270
+Recv: echo:; Bed size:
+Recv: echo:  C102 X220 Y220
+Recv: echo:; Mesh inset and leveling settings:
+Recv: echo:  C29 L25 R198 F25 B179 X5 Y5 T50 V1 ; 5x5 T=50 C
+Recv: echo:; Max Extruder temperature:
+Recv: echo:  C104 T275
+Recv: echo:; Park Head:
+Recv: echo:  C125 X228 Y218 Z20
+Recv: echo:; Filament runout sensor:
+Recv: echo:  C412 M1 ; Active mode: HIGH
+Recv: echo:; Invert Extruder:
+Recv: echo:  C562 E0 ; No inverted
+Recv: echo:; Probe Z Fix, Speed and Multiple Probing:
+Recv: echo:  C851 F0.00000 S480 M0
+Recv: ok P15 B15
+Send: M400
+Recv: ok P15 B15
+Send: M118 DUMP_DONE

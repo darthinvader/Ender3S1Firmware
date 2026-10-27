@@ -1,0 +1,160 @@
+# EEPROM/settings dump — Ender3S1-F1-v2 build (flashed 2026-07-30)
+# M115: Marlin 2.1.4 MRiscoC Ender3S1-F1-v2 (Jul 30 2026 16:04:49), bin md5 6e11c30095187fd50a62fa75904379f0
+# 7x7 UBL mesh probed hot @60C, saved slot 0, active. M503 follows.
+
+ T:29.98 /0.00 B:60.05 /60.00 @:0 B@:21
+ T:29.96 /0.00 B:60.04 /60.00 @:0 B@:21
+ T:29.95 /0.00 B:60.04 /60.00 @:0 B@:21
+ T:29.95 /0.00 B:60.03 /60.00 @:0 B@:21
+ok P31 B31
+Unified Bed Leveling System v1.01 active
+ok P31 B31
+Done.
+ok P31 B31
+//action:notification Printing...
+//action:notification Settings Stored
+//action:notification Settings Stored
+ok P31 B31
+ T:29.94 /0.00 B:60.03 /60.00 @:0 B@:21
+echo:Bed Leveling ON
+echo:Fade Height 10.00
+ok P31 B31
+Bed Topography Report:
+    ( 25,179)                                      (198,179)
+        0       1       2       3       4       5       6
+ 6 | +0.017   0.000   0.000  +0.005  +0.094  +0.152  +0.285
+   |
+ 5 | +0.038  +0.044  +0.035  +0.038  +0.140  +0.227  +0.355
+   |
+ 4 | +0.039  +0.015  +0.017  +0.013  +0.118  +0.220  +0.322
+   |
+ 3 | +0.045  +0.031  +0.035  +0.005  +0.110  +0.165  +0.325
+   |
+ 2 | +0.075  +0.017   0.000  -0.017  +0.060  +0.130  +0.294
+   |
+ 1 | +0.048  -0.027  -0.033  -0.055  +0.020  +0.128  +0.225
+   |
+ 0 | -0.025  -0.090  -0.098  -0.102  -0.047  +0.053 [+0.170]
+        0       1       2       3       4       5       6
+    ( 25, 25)                                      (198, 25)
+Mesh is valid
+Storage slot: 0
+echo:Bed Leveling ON
+echo:Fade Height 10.00
+ok P31 B31
+ T:29.95 /0.00 B:60.01 /60.00 @:0 B@:22
+ T:29.96 /0.00 B:60.03 /60.00 @:0 B@:20
+ T:29.94 /0.00 B:60.01 /60.00 @:0 B@:20
+ T:29.92 /0.00 B:60.03 /60.00 @:0 B@:18
+ T:29.94 /0.00 B:60.02 /60.00 @:0 B@:19
+ T:29.94 /0.00 B:60.01 /60.00 @:0 B@:19
+ T:29.94 /0.00 B:60.01 /60.00 @:0 B@:19
+ T:29.93 /0.00 B:59.99 /60.00 @:0 B@:20
+ T:29.91 /0.00 B:59.99 /60.00 @:0 B@:20
+ T:29.90 /0.00 B:59.97 /60.00 @:0 B@:21
+ T:29.89 /0.00 B:59.95 /60.00 @:0 B@:23
+ T:29.88 /0.00 B:59.96 /60.00 @:0 B@:23
+ T:29.87 /0.00 B:59.94 /60.00 @:0 B@:25
+ T:29.84 /0.00 B:59.92 /60.00 @:0 B@:27
+Bed Topography Report:
+    ( 25,179)                                      (198,179)
+        0       1       2       3       4       5       6
+ 6 | +0.017   0.000   0.000  +0.005  +0.094  +0.152  +0.285
+   |
+ 5 | +0.038  +0.044  +0.035  +0.038  +0.140  +0.227  +0.355
+   |
+ 4 | +0.039  +0.015  +0.017  +0.013  +0.118  +0.220  +0.322
+   |
+ 3 | +0.045  +0.031  +0.035  +0.005  +0.110  +0.165  +0.325
+   |
+ 2 | +0.075  +0.017   0.000  -0.017  +0.060  +0.130  +0.294
+   |
+ 1 | +0.048  -0.027  -0.033  -0.055  +0.020  +0.128  +0.225
+   |
+ 0 | -0.025  -0.090  -0.098  -0.102  -0.047  +0.053 [+0.170]
+        0       1       2       3       4       5       6
+    ( 25, 25)                                      (198, 25)
+ok P31 B31
+//action:notification Bed Cooling...
+//action:notification Ender3S1-F1-v2 Ready.
+ok P31 B31
+//action:notification Ender3S1-F1-v2 Ready.
+echo:; Linear Units:
+echo:  G21 ; (mm)
+echo:; Auto Temp Control:
+echo:  M104 S210 B250 F0.10
+echo:; Temperature Units:
+echo:  M149 C ; Units in Celsius
+echo:; Filament settings (Disabled):
+echo:  M200 S0 D1.75
+echo:; Steps per unit:
+echo:  M92 X80.00 Y80.00 Z400.00 E428.00
+echo:; Max feedrates (units/s):
+echo:  M203 X500.00 Y500.00 Z10.00 E45.00
+echo:; Max Acceleration (units/s2):
+echo:  M201 X5000.00 Y5000.00 Z100.00 E1000.00
+echo:; Acceleration (units/s2) (P<print-accel> R<retract-accel> T<travel-accel>):
+echo:  M204 P3000.00 R1500.00 T3000.00
+echo:; Advanced (B<min_segment_time_us> S<min_feedrate> T<min_travel_feedrate> J<junc_dev>):
+echo:  M205 B20000.00 S0.00 T0.00 J0.02
+echo:; Unified Bed Leveling:
+echo:  M420 S1 Z10.00 ; Leveling ON
+Unified Bed Leveling System v1.01 active
+echo:Active Mesh Slot 0
+echo:EEPROM can hold 5 meshes.
+echo:; BLTouch HS mode:
+echo:  M401 S1 ; ON
+echo:; Material heatup parameters:
+echo:  M145 S0 H195.00 B60.00 F128
+echo:  M145 S1 H240.00 B90.00 F128
+echo:  M145 S2 H230.00 B80.00 F128
+echo:  M145 S3 H190.00 B50.00 F128
+echo:; Bed PID:
+echo:  M304 P83.18 I15.04 D306.76
+echo:; Display Sleep:
+echo:  M255 S5 ; (minutes)
+echo:; LCD Brightness:
+echo:  M256 B127
+echo:; Power-loss recovery:
+echo:  M413 S0 ; OFF
+echo:; Retract (S<length> F<feedrate> Z<lift>):
+echo:  M207 S1.00 W13.00 F2400.00 Z0.20
+echo:; Recover (S<length> F<feedrate>):
+echo:  M208 S0.00 W0.00 F2400.00 R480.00
+echo:; Homing Feedrate:
+echo:  M210 X3000.00 Y3000.00 Z600.00
+echo:; Stored macros:
+None
+echo:; Z-Probe Offset:
+echo:  M851 X-31.80 Y-40.50 Z-3.10 ; (mm)
+echo:; Skew Factor:
+echo:  M852 I0.000000 ; XY
+echo:; Nonlinear Extrusion:
+echo:  M592 S0 A0.00 B0.00 C1.00
+echo:; Input Shaping:
+echo:  M593 X F55.00 D0.15
+echo:  M593 Y F58.00 D0.15
+echo:  M593 Z F0.00 D0.15
+echo:; Hotend Idle Timeout:
+echo:  M86 B0 E0 S600 T170
+echo:; Linear Advance:
+echo:  M900 K0.08 U0.02
+echo:; Filament load/unload:
+echo:  M603 L0.00 U100.00 ; (mm)
+echo:; Filament runout sensor:
+echo:  M412 S1 D200.00 ; Sensor ON
+echo:; Model predictive control:
+echo:  M306 E0 P40.00 L0.0028 Q20.00 C13.24 R0.2164 Astart
+ Watchdog Reset
+Marlin ProUI Version: 2.1.4 MRiscoC
+CUSTOM BUILD: 20260730 - 16:04
+Author: Miguel Risco-Castillo (MRiscoC)
+echo: Free Memory: 21023  PlannerBufferBytes: 4224
+//action:notification Ender3S1-F1-v2 Ready.
+echo:No SD card
+Unified Bed Leveling System v1.01 active
+//action:notification Mesh 0 Loaded
+//action:prompt_end
+BL24CXX Check succeeded!
+þecho: Serial 0 baud rate set to 250000
+ok P31 B32

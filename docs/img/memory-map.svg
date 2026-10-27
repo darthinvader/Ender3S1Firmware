@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="430" viewBox="0 0 900 430" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+<rect x="0" y="0" width="900" height="430" rx="10" fill="#ffffff" stroke="#d1d9e0"/>
+<text x="36" y="42" font-size="19" font-weight="600" fill="#1f2328" text-anchor="start">STM32F103RCT6 on the shipped build</text>
+<text x="36" y="64" font-size="13" font-weight="400" fill="#59636e" text-anchor="start">256 KiB flash, 28 KiB of it reserved for the SD bootloader</text>
+<text x="36" y="154" font-size="13" font-weight="700" fill="#59636e" text-anchor="start">FLASH</text>
+<rect x="150.00" y="120.00" width="76.56" height="56.00" rx="3" fill="#8c959f" stroke="none"/>
+<rect x="226.56" y="120.00" width="620.43" height="56.00" rx="3" fill="#2da44e" stroke="none"/>
+<rect x="846.99" y="120.00" width="3.01" height="56.00" rx="3" fill="#cf222e" stroke="none"/>
+<text x="188" y="145" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">28 KiB</text>
+<text x="188" y="161" font-size="10" font-weight="400" fill="#ffffff" text-anchor="middle">bootloader</text>
+<text x="536" y="154" font-size="13" font-weight="600" fill="#ffffff" text-anchor="middle">application 232,344 B  ·  99.5 %</text>
+<text x="850" y="86" font-size="13" font-weight="700" fill="#cf222e" text-anchor="end">1,128 B free</text>
+<text x="850" y="101" font-size="10" font-weight="400" fill="#59636e" text-anchor="end">the entire remaining budget</text>
+<path d="M754,106 L844,124" stroke="#cf222e" stroke-width="1.2" stroke-dasharray="3,3"/>
+<line x1="150.00" y1="112.00" x2="150.00" y2="206.00" stroke="#d1d9e0" stroke-width="1"/>
+<line x1="226.56" y1="112.00" x2="226.56" y2="206.00" stroke="#d1d9e0" stroke-width="1" stroke-dasharray="4,3"/>
+<line x1="850.00" y1="112.00" x2="850.00" y2="206.00" stroke="#d1d9e0" stroke-width="1"/>
+<text x="150" y="220" font-size="11" font-weight="400" fill="#59636e" text-anchor="start">0x08000000</text>
+<text x="850" y="220" font-size="11" font-weight="400" fill="#59636e" text-anchor="end">0x08040000</text>
+<text x="36" y="290" font-size="13" font-weight="700" fill="#59636e" text-anchor="start">RAM</text>
+<rect x="150.00" y="262.00" width="399.67" height="46.00" rx="3" fill="#0969da" stroke="none"/>
+<rect x="549.67" y="262.00" width="300.33" height="46.00" rx="3" fill="#eef2f6" stroke="none"/>
+<text x="349" y="290" font-size="13" font-weight="600" fill="#ffffff" text-anchor="middle">28,064 B  ·  57.1 %</text>
+<text x="699" y="290" font-size="12" font-weight="500" fill="#59636e" text-anchor="middle">21,088 B free</text>
+<text x="150" y="328" font-size="11" font-weight="400" fill="#59636e" text-anchor="start">0x20000000</text>
+<text x="850" y="328" font-size="11" font-weight="400" fill="#59636e" text-anchor="end">0x2000C000</text>
+<rect x="120.00" y="357.00" width="12.00" height="12.00" rx="3" fill="#8c959f" stroke="none"/>
+<text x="140" y="367" font-size="12" font-weight="400" fill="#59636e" text-anchor="start">bootloader, 28 KiB</text>
+<rect x="266.00" y="357.00" width="12.00" height="12.00" rx="3" fill="#2da44e" stroke="none"/>
+<text x="286" y="367" font-size="12" font-weight="400" fill="#59636e" text-anchor="start">application, 232,344 B of 233,472 B</text>
+<rect x="525.00" y="357.00" width="12.00" height="12.00" rx="3" fill="#cf222e" stroke="none"/>
+<text x="545" y="367" font-size="12" font-weight="400" fill="#59636e" text-anchor="start">1,128 B unallocated</text>
+<rect x="678.00" y="357.00" width="12.00" height="12.00" rx="3" fill="#0969da" stroke="none"/>
+<text x="698" y="367" font-size="12" font-weight="400" fill="#59636e" text-anchor="start">RAM in use, 57.1 %</text>
+<text x="36" y="412" font-size="11" font-weight="400" fill="#59636e" text-anchor="start">Application region 0x08007000-0x08040000. Every added feature has to be paid for by removing another.</text>
+</svg>

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="250" viewBox="0 0 940 250" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+<rect x="0" y="0" width="940" height="250" rx="10" fill="#ffffff" stroke="#d1d9e0"/>
+<text x="30" y="40" font-size="19" font-weight="600" fill="#1f2328" text-anchor="start">From committed configuration to a flashed printer</text>
+<text x="30" y="62" font-size="13" font-weight="400" fill="#59636e" text-anchor="start">Every step is a script in this repository, and every artifact is checksummed</text>
+<rect x="30.00" y="100.00" width="128.00" height="84.00" rx="8" fill="#f6f8fa" stroke="#d1d9e0"/>
+<rect x="30.00" y="100.00" width="4.00" height="84.00" rx="2" fill="#0969da" stroke="none"/>
+<text x="44" y="126" font-size="13" font-weight="700" fill="#1f2328" text-anchor="start">pinned upstream</text>
+<text x="44" y="146" font-size="11" font-weight="400" fill="#59636e" text-anchor="start">mriscoc Ender3V2S1</text>
+<text x="44" y="161" font-size="11" font-weight="400" fill="#59636e" text-anchor="start">@ ffe684b</text>
+<line x1="161" y1="142" x2="175" y2="142" stroke="#d1d9e0" stroke-width="1.6"/>
+<path d="M175,142 l-6,-4 l0,8 z" fill="#d1d9e0"/>
+<rect x="178.00" y="100.00" width="128.00" height="84.00" rx="8" fill="#f6f8fa" stroke="#d1d9e0"/>
+<rect x="178.00" y="100.00" width="4.00" height="84.00" rx="2" fill="#8250df" stroke="none"/>
+<text x="192" y="126" font-size="13" font-weight="700" fill="#1f2328" text-anchor="start">configs/ + patch</text>
+<text x="192" y="146" font-size="11" font-weight="400" fill="#59636e" text-anchor="start">variant folder +</text>
+<text x="192" y="161" font-size="11" font-weight="400" fill="#59636e" text-anchor="start">ICON_ShapingZ fix</text>
+<line x1="309" y1="142" x2="323" y2="142" stroke="#d1d9e0" stroke-width="1.6"/>
+<path d="M323,142 l-6,-4 l0,8 z" fill="#d1d9e0"/>
+<rect x="326.00" y="100.00" width="128.00" height="84.00" rx="8" fill="#f6f8fa" stroke="#d1d9e0"/>
+<rect x="326.00" y="100.00" width="4.00" height="84.00" rx="2" fill="#bf3989" stroke="none"/>
+<text x="340" y="126" font-size="13" font-weight="700" fill="#1f2328" text-anchor="start">PlatformIO 6.1.19</text>
+<text x="340" y="146" font-size="11" font-weight="400" fill="#59636e" text-anchor="start">env STM32F103RC</text>
+<text x="340" y="161" font-size="11" font-weight="400" fill="#59636e" text-anchor="start">_creality</text>
+<line x1="457" y1="142" x2="471" y2="142" stroke="#d1d9e0" stroke-width="1.6"/>
+<path d="M471,142 l-6,-4 l0,8 z" fill="#d1d9e0"/>
+<rect x="474.00" y="100.00" width="128.00" height="84.00" rx="8" fill="#f6f8fa" stroke="#d1d9e0"/>
+<rect x="474.00" y="100.00" width="4.00" height="84.00" rx="2" fill="#2da44e" stroke="none"/>
+<text x="488" y="126" font-size="13" font-weight="700" fill="#1f2328" text-anchor="start">firmware/*.bin</text>
+<text x="488" y="146" font-size="11" font-weight="400" fill="#59636e" text-anchor="start">232,344 B</text>
+<text x="488" y="161" font-size="11" font-weight="400" fill="#59636e" text-anchor="start">99.5 % of region</text>
+<line x1="605" y1="142" x2="619" y2="142" stroke="#d1d9e0" stroke-width="1.6"/>
+<path d="M619,142 l-6,-4 l0,8 z" fill="#d1d9e0"/>
+<rect x="622.00" y="100.00" width="128.00" height="84.00" rx="8" fill="#f6f8fa" stroke="#d1d9e0"/>
+<rect x="622.00" y="100.00" width="4.00" height="84.00" rx="2" fill="#bc4c00" stroke="none"/>
+<text x="636" y="126" font-size="13" font-weight="700" fill="#1f2328" text-anchor="start">SD card</text>
+<text x="636" y="146" font-size="11" font-weight="400" fill="#59636e" text-anchor="start">MBR FAT32 4K</text>
+<text x="636" y="161" font-size="11" font-weight="400" fill="#59636e" text-anchor="start">unique 8.3 name</text>
+<line x1="753" y1="142" x2="767" y2="142" stroke="#d1d9e0" stroke-width="1.6"/>
+<path d="M767,142 l-6,-4 l0,8 z" fill="#d1d9e0"/>
+<rect x="770.00" y="100.00" width="128.00" height="84.00" rx="8" fill="#f6f8fa" stroke="#d1d9e0"/>
+<rect x="770.00" y="100.00" width="4.00" height="84.00" rx="2" fill="#1f2328" stroke="none"/>
+<text x="784" y="126" font-size="13" font-weight="700" fill="#1f2328" text-anchor="start">printer</text>
+<text x="784" y="146" font-size="11" font-weight="400" fill="#59636e" text-anchor="start">M115 reports</text>
+<text x="784" y="161" font-size="11" font-weight="400" fill="#59636e" text-anchor="start">Ender3S1-F1-v2</text>
+<text x="30" y="224" font-size="12" font-weight="500" fill="#59636e" text-anchor="start">scripts/bootstrap.sh  -&gt;  scripts/build.sh  -&gt;  scripts/verify-artifacts.sh  -&gt;  scripts/flash-card.sh</text>
+</svg>
