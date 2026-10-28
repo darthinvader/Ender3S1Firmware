@@ -25,7 +25,7 @@ body {
 }
 
 a { color: var(--accent); }
-code, .mono { font-family: var(--mono); font-size: .86em; }
+code, .mono { font-family: var(--mono); font-size: .86em; font-variant-numeric: tabular-nums; }
 .muted { color: var(--muted); }
 .hint { color: var(--muted); font-size: .82rem; margin: 6px 0 0; }
 .small { font-size: .78rem; }
@@ -118,9 +118,13 @@ main {
 .preset.active { background: rgba(76, 141, 255, .18); border-color: var(--accent); }
 
 .budget-head { display: flex; justify-content: space-between; font-size: .8rem; margin-bottom: 6px; }
-.bar { position: relative; height: 8px; background: #0d1220; border-radius: 4px; overflow: hidden; }
-.bar-used { height: 100%; background: linear-gradient(90deg, #3d7be0, #6aa6ff); width: 0; transition: width .25s; }
-.bar-over { height: 100%; background: var(--bad); width: 0; transition: width .25s; }
+.bar { position: relative; height: 8px; background: #0d1220; border-radius: 4px; overflow: hidden;
+  font-variant-numeric: tabular-nums; }
+.bar-used { position: absolute; left: 0; top: 0; height: 100%; width: 100%; transform: scaleX(0);
+  transform-origin: left; background: linear-gradient(90deg, #3d7be0, #6aa6ff);
+  transition: transform .18s ease-out; }
+.bar-over { position: absolute; left: 0; top: 0; height: 100%; width: 100%; transform: scaleX(0);
+  transform-origin: left; background: var(--bad); transition: transform .18s ease-out; }
 .bar.over .bar-used { background: linear-gradient(90deg, #a33, var(--bad)); }
 .budget-foot { display: flex; justify-content: space-between; font-size: .76rem; color: var(--muted); margin-top: 5px; }
 .delta { font-size: .82rem; margin: 9px 0 0; }
@@ -196,3 +200,48 @@ details summary { cursor: pointer; }
 .meshrow { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
 .meshrow label { flex: 0 0 auto; }
 .meshrow select { flex: 1 1 auto; }
+
+/* ---------- accessibility and small screens ---------- */
+.skip {
+  position: absolute; left: -9999px; top: 0; z-index: 50;
+  background: var(--accent); color: #fff; padding: 8px 12px; border-radius: 0 0 8px 0;
+}
+.skip:focus { left: 0; }
+
+.tiny { font-size: .68rem; padding: 2px 7px; border-radius: 6px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+
+@media (max-width: 1050px) {
+  .side { order: -1; }
+  .topbar { flex-direction: column; gap: 10px; }
+  .controls { min-width: 0; width: 100%; }
+  main { padding: 12px 14px 40px; }
+  .card { scroll-margin-top: 120px; }
+}
+@media (max-width: 620px) {
+  body { font-size: 14.5px; }
+  .presets { flex-wrap: wrap; }
+  .preset { flex: 1 1 45%; }
+  .row { grid-template-columns: 20px 1fr; }
+  .row .cost { grid-column: 2; padding-top: 0; }
+}
+
+/* ---------- mesh radios ---------- */
+fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.radiogroup { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.radio {
+  display: flex; align-items: center; gap: 6px; flex: 1 1 42%;
+  padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--panel-2); color: var(--ink); cursor: pointer;
+  font-size: .8rem; text-transform: none; letter-spacing: 0; margin: 0;
+}
+.radio input { width: auto; margin: 0; accent-color: var(--accent); }
+.radio:hover { border-color: var(--accent); }
+.radio.checked { border-color: var(--accent); background: rgba(76, 141, 255, .16); }
+.radio .pts { color: var(--muted); font-size: .74rem; }
+.inert { opacity: .66; cursor: not-allowed; }
+.empty-state { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.empty-state button { flex: 0 0 auto; }

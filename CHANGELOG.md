@@ -4,7 +4,23 @@ Firmware builds for a Creality Ender 3 S1 (STM32F103RCT6, mainboard v2.4.S1.301,
 
 ## Unreleased
 
-Nothing pending. No firmware has been built or flashed since v2; the calibration work done afterwards is recorded under v2 because it changed EEPROM state, not the image.
+No firmware image has been built or flashed since v2; the calibration work done afterwards is recorded under v2 because it changed EEPROM state, not the image. The entries below are the configurator, not the firmware on the machine.
+
+### Added
+
+- `scripts/configurator.sh`: one command that bootstraps on first use, starts the service, waits for it, opens the page, and stops on Ctrl+C.
+- `make configurator`, the same thing.
+- `scripts/selftest-configurator.py`: 14 behavioural checks against a live service, wired into `make verify`.
+- Mesh size as a first-class control (3x3, 5x5, 7x7, 9x9 default) with the real ceiling documented: the runtime matrix is a fixed 9x9 because mriscoc ships ProUI precompiled.
+- `docs/UI-NOTES.md`: every usability and accessibility rule the page follows, with its published source, and the gaps that remain.
+
+### Fixed
+
+- `/static/` and `/api/build/<id>` paths could walk out of their directory with `..` (now rejected with 404).
+- `HEAD` requests returned 501.
+- An exception inside a handler dropped the connection instead of answering with JSON 500.
+- Request bodies were read without a size limit (now 64 KiB).
+- The 9x9 mesh matrix had no build plumbing: `--mesh`, catalogue bounds, build request, signature and manifest now carry it.
 
 ## v2 - 2026-07-30
 

@@ -364,8 +364,40 @@ def worker():
             work.task_done()
 
 
+JOB_ID_RE = __import__("re").compile(r"^[0-9a-f]{12}$")
+STATIC_RE = __import__("re").compile(r"^[A-Za-z0-9._-]+$")
+MAX_BODY = 64 * 1024
+
+
 class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
+
+    def do_HEAD(self):
+        """Answer HEAD like GET, without the body: link checkers and curl -I use it."""
+        path = urlparse(self.path).path
+        if path in ("/", "/index.html", "/static/app.js", "/static/style.css") or path.startswith("/api/"):
+            self.send_response(200)
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+        self.send_response(404)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
+    def do_GET(self):
+        try:
+            return self._get()
+        except Exception as exc:  # never leave a request without an answer
+            sys.stderr.write("GET %s failed: %r\n" % (self.path, exc))
+            return self._json({"error": "internal error: %s" % str(exc)[:200]}, 500)
+
+    def do_POST(self):
+        try:
+            return self._post()
+        except Exception as exc:
+            sys.stderr.write("POST %s failed: %r\n" % (self.path, exc))
+            return self._json({"error": "internal error: %s" % str(exc)[:200]}, 500)
 
     def log_message(self, fmt, *args):
         sys.stderr.write("%s - %s\n" % (self.address_string(), fmt % args))
@@ -388,14 +420,18 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"error": "not found"}, 404)
         self._send(200, path.read_bytes(), ctype)
 
-    def do_GET(self):
+    def _get(self):
         parts = urlparse(self.path)
         path = parts.path
         if path in ("/", "/index.html"):
             return self._file(WEB / "index.html", "text/html; charset=utf-8")
         if path.startswith("/static/"):
             name = path.split("/static/", 1)[1]
-            ctype = "text/css" if name.endswith(".css") else "application/javascript"
+            if not STATIC_RE.match(name) or name.startswith("."):
+                return self._json({"error": "not found"}, 404)
+            ctype = ("text/css" if name.endswith(".css")
+                     else "application/json" if name.endswith(".json")
+                     else "application/javascript")
             return self._file(WEB / name, ctype)
         if path == "/api/catalog":
             catalog = json.loads(CATALOG.read_text())
@@ -432,6 +468,9 @@ class Handler(BaseHTTPRequestHandler):
                                    for j in items])
         if path.startswith("/api/build/"):
             rest = path[len("/api/build/"):].strip("/")
+            head = rest.split("/", 1)[0]
+            if head and not JOB_ID_RE.match(head):
+                return self._json({"error": "not found"}, 404)
             if rest.endswith("/firmware.bin"):
                 jid = rest[:-len("/firmware.bin")]
                 return self._file(JOBS / jid / "firmware.bin")
@@ -539,6 +578,8 @@ class Handler(BaseHTTPRequestHandler):
     def _fetch_version(self):
         """POST /api/versions/fetch - download one firmware version."""
         length = int(self.headers.get("Content-Length") or 0)
+        if length > MAX_BODY:
+            return self._json({"error": "request too large"}, 413)
         try:
             body = json.loads(self.rfile.read(length) or b"{}")
         except Exception:
@@ -563,6 +604,8 @@ class Handler(BaseHTTPRequestHandler):
     def _write(self):
         """POST /api/write - format a device and put the selected payloads on it."""
         length = int(self.headers.get("Content-Length") or 0)
+        if length > MAX_BODY:
+            return self._json({"error": "request too large"}, 413)
         try:
             body = json.loads(self.rfile.read(length) or b"{}")
         except Exception:
@@ -609,7 +652,7 @@ class Handler(BaseHTTPRequestHandler):
         work.put(job)
         return self._json({"id": jid, "status": "queued"}, 202)
 
-    def do_POST(self):
+    def _post(self):
         path = urlparse(self.path).path
         if path == "/api/versions/fetch":
             return self._fetch_version()
@@ -618,6 +661,8 @@ class Handler(BaseHTTPRequestHandler):
         if path != "/api/build":
             return self._json({"error": "not found"}, 404)
         length = int(self.headers.get("Content-Length") or 0)
+        if length > MAX_BODY:
+            return self._json({"error": "request too large"}, 413)
         try:
             body = json.loads(self.rfile.read(length) or b"{}")
         except Exception:

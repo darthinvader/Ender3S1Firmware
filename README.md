@@ -124,6 +124,35 @@ The whole chain is five scripts and one configuration folder:
 
 Reproducibility caveat worth stating up front: the binaries embed their build date and time (`__DATE__` / `__TIME__` in Version.h), so a rebuild is **not byte-identical**. The meaningful comparison is flash size, RAM usage and the `M115` version string. See [docs/BUILD.md](docs/BUILD.md).
 
+## Run the configurator (one command)
+
+```bash
+./scripts/configurator.sh
+```
+
+That is the whole setup. On the first run it bootstraps the pinned Marlin tree and PlatformIO (a few minutes, once), starts the local service, waits until it answers, opens `http://127.0.0.1:8787` in your browser and prints the URL. On later runs it starts in about a second. **Ctrl+C stops it.**
+
+| Option | What it does |
+|---|---|
+| `--no-open` | print the URL instead of opening a browser (servers, SSH) |
+| `--port=9000` | use another port (or set `CONFIGURATOR_PORT`) |
+| `--no-bootstrap` | fail with instructions instead of downloading the toolchain |
+| `--help` | the same table, from the terminal |
+
+If the service is already running, the script says so and exits instead of starting a second copy on the same port. `make configurator` is the same thing.
+
+### Using the page
+
+1. **Machine** (top right) - the board this image is for. Only supported boards are offered.
+2. **Firmware version** - the pinned commit by default, or any mriscoc release or branch: pick it, press *download this version*, and the page clones it and offers to build it. Measured costs only apply to the pinned tree; other versions are built and reported at their real size.
+3. **Features** (left) - filter, or use a preset: *What I run now*, *Minimum*, *Add what fits*. Each row states its measured flash and RAM cost. Features that need the screen's own items pull them in automatically, and conflicts are refused before a compiler starts.
+4. **Mesh size** - the default bed mesh (3x3 to 9x9). The firmware accepts any size up to 9 at runtime; the build only sets what a fresh EEPROM starts with.
+5. **Screen** - pick the panel OS and asset pack that pair with custom firmware; the bundle carries both.
+6. **Build** - watch the flash budget, press *Build firmware*. The Result card gives the real flash/RAM, the sha256, `.bin`, `manifest.json` and `bundle.zip`.
+7. **Write the card** - optional: pick the device, choose what goes on it, confirm the modal, and the service formats and writes it, md5-checking every copy.
+
+Everything on the page is served from the same process - there is no separate frontend build step, and no network access is needed for the pinned tree.
+
 ## Configurator (optional)
 
 A local web app does the feature picking and the compiling for you: tick what you want, watch the flash budget, press build, download the image.
@@ -215,6 +244,7 @@ What is checked mechanically, on every push and locally with `make verify`:
 | Configuration assertions | the shipped config still carries UBL, the 7x7 mesh, the stock thermistor, input shaping, linear advance and binary transfer |
 | Relative-link check over all Markdown | the documentation does not rot |
 | Full rebuild in CI | the pinned upstream commits plus the committed configuration still compile |
+| `scripts/selftest-configurator.py` | 14 behavioural checks against a live service: routes answer, paths cannot escape their directory, bad machine/version/mesh requests are refused, oversized bodies are rejected |
 
 ### Measured reproducibility
 
@@ -260,6 +290,7 @@ account action this machine cannot perform on its own. It never force-pushes.
 | [docs/DESIGN-NOTES.md](docs/DESIGN-NOTES.md) | What was enabled, what was rejected, and what the flash budget bought |
 | [CHANGELOG.md](CHANGELOG.md) | Dated history from stock firmware to the current build |
 | [tools/configurator/README.md](tools/configurator/README.md) | The configurator: feature catalogue, measured prediction accuracy, building any mriscoc release or branch |
+| [docs/UI-NOTES.md](docs/UI-NOTES.md) | Why the page looks and behaves like this - every rule, its published source, and the gaps |
 
 ## Compatibility - read before flashing
 

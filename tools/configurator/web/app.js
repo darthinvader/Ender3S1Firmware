@@ -47,24 +47,45 @@ function meshSize() {
 }
 function renderMesh() {
   const spec = meshSpec();
-  const sel = $("mesh");
-  if (!sel) return;
-  const keep = meshSize();
-  sel.innerHTML = "";
+  const host = $("mesh-options");
+  if (!host) return;
+  if (!app.mesh) app.mesh = spec.default;
+  host.innerHTML = "";
   for (const n of (spec.presets || [7])) {
-    const o = document.createElement("option");
-    o.value = String(n);
-    o.textContent = n + " x " + n + " (" + n * n + " points)" + (n === spec.default ? " - what this build uses" : "");
-    sel.appendChild(o);
+    const label = document.createElement("label");
+    label.className = "radio";
+    const input = document.createElement("input");
+    input.type = "radio";
+    input.name = "mesh";
+    input.value = String(n);
+    input.checked = n === meshSize();
+    input.onchange = () => {
+      app.mesh = n;
+      syncMeshRadios();
+      renderMeshNote();
+      renderBudget();
+    };
+    const span = document.createElement("span");
+    span.textContent = n + " x " + n;
+    const pts = document.createElement("span");
+    pts.className = "pts";
+    pts.textContent = n * n + " pts";
+    label.appendChild(input);
+    label.appendChild(span);
+    label.appendChild(pts);
+    host.appendChild(label);
   }
-  sel.value = String(keep);
-  sel.onchange = () => {
-    app.mesh = Number(sel.value);
-    renderMeshNote();
-    renderBudget();
-  };
+  syncMeshRadios();
   renderMeshNote();
 }
+
+function syncMeshRadios() {
+  document.querySelectorAll('#mesh-options input[name="mesh"]').forEach((el) => {
+    el.checked = Number(el.value) === meshSize();
+    el.parentElement.classList.toggle("checked", el.checked);
+  });
+}
+
 function renderMeshNote() {
   const spec = meshSpec();
   const n = meshSize();
@@ -181,7 +202,7 @@ async function inspectSource() {
 async function fetchVersion() {
   const v = currentVersion();
   if (!v || isPinned()) return;
-  app.busy = true;
+  setBusy(true);
   $("source-fetch").disabled = true;
   $("source-note").textContent = "downloading " + v.label + " ...";
   $("status").classList.remove("hidden");
@@ -195,7 +216,7 @@ async function fetchVersion() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
     if (data.status === "already") {
-      app.busy = false;
+      setBusy(false);
       await loadVersions(false);
       renderBudget();
       return;
@@ -203,7 +224,7 @@ async function fetchVersion() {
     $("jobid").textContent = data.id;
     poll(data.id);
   } catch (e) {
-    app.busy = false;
+    setBusy(false);
     toast("Download failed: " + e.message);
     renderSources();
   }
@@ -237,8 +258,8 @@ function renderUnmeasured(m) {
   const v = currentVersion() || { label: app.sourceId };
   $('predicted').textContent = 'not measured';
   $('bar').classList.remove('over');
-  $('bar-used').style.width = '0%';
-  $('bar-over').style.width = '0%';
+  $('bar-used').style.transform = 'scaleX(0)';
+  $('bar-over').style.transform = 'scaleX(0)';
   $('free').textContent = 'size known after compiling';
   $('region').textContent = fmt(m.flash_region) + ' B region';
   const el = $('delta');
@@ -253,11 +274,11 @@ function renderUnmeasured(m) {
   const build = $('build');
   build.classList.remove('over');
   build.textContent = 'Build this version';
-  build.disabled = app.busy || !app.catalog.build.toolchain_ready;
+  setBuildReady(!app.busy && !!app.catalog.build.toolchain_ready && !!v.fetched,
+    !v.fetched ? 'Download this version first.' : (app.busy ? 'one job is already running' : 'the build tree is not ready: run ./scripts/bootstrap.sh'));
   $('build-note').textContent = (v.fetched
     ? 'Builds ' + v.label + ' at ' + v.sha + '. Features this version lacks are skipped, and the result is the truth about its size.'
     : 'Download this version first.');
-  build.disabled = build.disabled || !v.fetched;
   updateWriteState();
 }
 
@@ -350,6 +371,7 @@ function renderGroups() {
   const host = $('groups');
   const scroll = window.scrollY;
   host.innerHTML = '';
+  host.removeAttribute('aria-busy');
   let hidden = 0;
   let shown = 0;
   for (const group of app.catalog.groups) {
@@ -364,10 +386,16 @@ function renderGroups() {
     const h = document.createElement('h2');
     h.dataset.group = group;
     h.textContent = group + '  (' + feats.filter((f) => app.state[f.id]).length + '/' + feats.length + ')';
-    h.onclick = () => {
+    h.setAttribute('role', 'button');
+    h.tabIndex = 0;
+    h.setAttribute('aria-expanded', app.collapsed[group] ? 'false' : 'true');
+    const flip = () => {
       app.collapsed[group] = !app.collapsed[group];
       box.classList.toggle('collapsed');
+      h.setAttribute('aria-expanded', app.collapsed[group] ? 'false' : 'true');
     };
+    h.onclick = flip;
+    h.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); } };
     box.appendChild(h);
 
     for (const f of feats) {
@@ -424,10 +452,18 @@ function renderGroups() {
     host.appendChild(box);
   }
   if (!shown) {
+    const box = document.createElement('div');
+    box.className = 'empty-state';
     const p = document.createElement('p');
     p.className = 'hint';
-    p.textContent = 'Nothing matches "' + app.filter + '".';
-    host.appendChild(p);
+    p.textContent = 'No features match "' + app.filter + '".';
+    const clear = document.createElement('button');
+    clear.className = 'ghost small-btn';
+    clear.textContent = 'Clear filter';
+    clear.onclick = () => { $('filter').value = ''; app.filter = ''; renderGroups(); };
+    box.appendChild(p);
+    box.appendChild(clear);
+    host.appendChild(box);
   } else if (!app.showUnavailable && hidden > 0) {
     const p = document.createElement('p');
     p.className = 'hint';
@@ -446,6 +482,36 @@ function syncCheckboxes() {
   });
 }
 
+function setBusy(flag, why) {
+  app.busy = flag;
+  for (const id of ["build", "source-fetch", "write", "refresh-devices", "source-refresh"]) {
+    const el = $(id);
+    if (!el) continue;
+    el.setAttribute("aria-busy", flag ? "true" : "false");
+    if (flag) {
+      el.disabled = true;
+      el.title = why || "one job at a time: wait for the current one";
+    } else {
+      el.title = "";
+    }
+  }
+  if (!flag) {
+    renderBudget();
+    updateWriteState();
+    renderSources();
+  }
+}
+
+function setBuildReady(ok, reason) {
+  const b = $('build');
+  b.setAttribute('aria-disabled', ok ? 'false' : 'true');
+  b.classList.toggle('inert', !ok);
+  b.disabled = false;                 // focusable, so the reason is reachable
+  b.title = ok ? '' : (reason || 'not ready');
+  b.dataset.reason = ok ? '' : (reason || 'not ready');
+  if (!ok && reason) $('build-note').textContent = reason;
+}
+
 function renderBudget() {
   const m = machineById(machine());
   const region = m.flash_region;
@@ -456,8 +522,8 @@ function renderBudget() {
 
   $('predicted').textContent = fmt(p.flash) + ' B';
   $('bar').classList.toggle('over', over > 0);
-  $('bar-used').style.width = (100 * used / region).toFixed(2) + '%';
-  $('bar-over').style.width = (100 * over / region).toFixed(2) + '%';
+  $('bar-used').style.transform = 'scaleX(' + Math.min(1, used / region).toFixed(4) + ')';
+  $('bar-over').style.transform = 'scaleX(' + Math.min(1, over / region).toFixed(4) + ')';
   $('free').textContent = over ? 'over by ' + fmt(over) : fmt(region - p.flash) + ' B free';
   $('region').textContent = fmt(region) + ' B region';
 
@@ -484,7 +550,8 @@ function renderBudget() {
   const build = $('build');
   build.classList.toggle('over', over > 0);
   build.textContent = over > 0 ? 'Build anyway (' + fmt(over) + ' B over)' : 'Build firmware';
-  build.disabled = app.busy || !app.catalog.build.toolchain_ready;
+  setBuildReady(!app.busy && !!app.catalog.build.toolchain_ready,
+    app.busy ? 'one job is already running' : 'the build tree is not ready: run ./scripts/bootstrap.sh');
   $('build-note').textContent = over > 0
     ? ('Over budget: ' + fmt(p.flash) + ' B against ' + fmt(region) + ' B. The link will fail unless the board has more flash.')
     : '';
@@ -583,6 +650,11 @@ function applyPreset(name) {
 
 // --------------------------------------------------------------------- build
 async function startBuild() {
+  const btn = $('build');
+  if (btn.getAttribute('aria-disabled') === 'true') {
+    toast(btn.dataset.reason || 'not ready');
+    return;
+  }
   const pinned = isPinned();
   const p = predicted();
   const region = machineById(machine()).flash_region;
@@ -604,7 +676,7 @@ async function startBuild() {
   const osEntry = sc.os.find((x) => x.id === $('screen-os').value);
   const packEntry = sc.assets.find((x) => x.id === $('screen-assets').value);
 
-  app.busy = true;
+  setBusy(true);
   renderBudget();
   $('result').classList.add('hidden');
   $('write-result').classList.add('hidden');
@@ -626,7 +698,7 @@ async function startBuild() {
     $('jobid').textContent = data.id;
     poll(data.id);
   } catch (e) {
-    app.busy = false;
+    setBusy(false);
     renderBudget();
     $('phase').textContent = 'failed to submit';
     toast('Could not start the build: ' + e.message);
@@ -635,7 +707,7 @@ async function startBuild() {
 
 function poll(id) {
   clearTimeout(app.pollTimer);
-  const finish = () => { app.busy = false; renderBudget(); };
+  const finish = () => { setBusy(false); renderBudget(); };
   fetch('/api/build/' + id).then((r) => r.json()).then((j) => {
     $('phase').textContent = j.phase || j.status;
     if (j.log) { $('log').textContent = j.log.join('\n'); $('log').scrollTop = $('log').scrollHeight; }
@@ -648,7 +720,7 @@ function poll(id) {
     if (j.status === 'failed') {
       finish();
       $('phase').textContent = 'failed';
-      toast(j.error || 'the build failed');
+      toast((j.error || 'the build failed') + ' - the log above has the compiler output');
       return;
     }
     app.pollTimer = setTimeout(() => poll(id), 1200);
@@ -739,16 +811,36 @@ async function doWrite() {
   if (parts.indexOf('screen') !== -1) what.push('screen OS: ' + (osEntry ? osEntry.label : '?'));
   if (parts.indexOf('screen') !== -1) what.push('screen assets: ' + (packEntry ? packEntry.label : '?'));
 
+  const build = app.build || {};
+  const measured = (build.result || {});
+  const version = currentVersion();
+  const changed = app.catalog.features.filter((f) => app.state[f.id] !== f.on_by_default);
+  const rows = [
+    ["Machine", (machineById(machine()) || {}).label || machine()],
+    ["Firmware", isPinned()
+      ? "pinned " + (((app.versions || [])[0] || {}).sha || "commit")
+      : ((version && version.label) || app.sourceId)],
+    ["Mesh", meshSize() + " x " + meshSize() + " default"],
+    ["Image", (measured.file_size ? fmt(measured.file_size) + " B" : "not built") +
+      (measured.flash_used ? " (" + fmt(measured.flash_used) + " B flash)" : "")],
+    ["Changes", changed.length ? changed.length + " feature(s) differ from what you run" : "same feature set as what you run"],
+    ["Screen", parts.indexOf("screen") !== -1
+      ? (osEntry ? osEntry.label : "?") + " + " + (packEntry ? packEntry.label : "?")
+      : "not written"],
+    ["Device", d.path + " - " + d.size_human + ", " + d.model],
+  ];
+  const table = '<table class="kv">' + rows.map((r) =>
+    "<tr><th>" + r[0] + "</th><td>" + r[1] + "</td></tr>").join("") + "</table>";
   const ok = await modal(
-    'Erase ' + d.path + ' and write to it?',
-    '<p><b>' + d.path + '</b> - ' + d.size_human + ', ' + d.model + ' (' + d.transport + ')</p>' +
-    (d.mounted.length ? '<p>Mounted at <span class="mono">' + d.mounted.join(', ') + '</span>; it will be unmounted first.</p>' : '') +
-    '<p>Everything on it is erased. This writes:</p><ul>' + what.map((w) => '<li>' + w + '</li>').join('') + '</ul>' +
-    '<p>Formatted MBR + FAT32 with 4096-byte clusters, which is what the Creality bootloader needs.</p>',
-    'Erase and write');
+    "Erase " + d.path + "?",
+    table +
+    (d.mounted.length ? '<p class="hint">Mounted at <span class="mono">' + d.mounted.join(", ") + "</span>; it will be unmounted first.</p>" : "") +
+    "<p>Everything on the card is erased and reformatted MBR + FAT32 with 4096-byte clusters. This writes:</p><ul>" +
+    what.map((w) => "<li>" + w + "</li>").join("") + "</ul>",
+    "Erase " + d.path + " and write");
   if (!ok) return;
 
-  app.busy = true;
+  setBusy(true);
   updateWriteState();
   $('write-result').classList.add('hidden');
   $('status').classList.remove('hidden');
@@ -765,7 +857,7 @@ async function doWrite() {
     $('jobid').textContent = data.id;
     poll(data.id);
   } catch (e) {
-    app.busy = false;
+    setBusy(false);
     updateWriteState();
     $('phase').textContent = 'refused';
     toast('Write refused: ' + e.message);
@@ -839,6 +931,23 @@ async function boot() {
   $('write').onclick = doWrite;
   $('refresh-devices').onclick = loadDevices;
   $('source-fetch').onclick = fetchVersion;
+  $('copy-sha').onclick = async () => {
+    const text = $('r-sha').textContent.trim();
+    if (!text) return;
+    try { await navigator.clipboard.writeText(text); toast('sha256 copied', 'info'); }
+    catch (e) { toast('copy failed: ' + e.message); }
+  };
+  document.addEventListener('keydown', (e) => {
+    const tag = (e.target && e.target.tagName) || '';
+    const typing = tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA';
+    if (e.key === '/' && !typing) { e.preventDefault(); $('filter').focus(); }
+    else if (e.key === 'Escape' && document.activeElement === $('filter')) {
+      $('filter').value = '';
+      app.filter = '';
+      renderGroups();
+      $('filter').blur();
+    }
+  });
   $('source-refresh').onclick = () => loadVersions(true);
   $('part-board').onchange = updateWriteState;
   $('part-screen').onchange = updateWriteState;

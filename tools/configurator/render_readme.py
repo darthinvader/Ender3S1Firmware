@@ -77,9 +77,13 @@ A local web app that turns \"I want these features\" into a compiled, checksumme
 ## Quick start
 
 @FENCE@bash
-./scripts/bootstrap.sh                      # once: pinned sources + PlatformIO 6.1.19
-python3 tools/configurator/server.py        # -> http://127.0.0.1:8787
+./scripts/configurator.sh                   # -> http://127.0.0.1:8787
 @FENCE@
+
+That one command bootstraps the pinned tree on first use (a few minutes), starts
+the service, waits until it answers and opens the page. @BT@--no-open@BT@,
+@BT@--port=9000@BT@ and @BT@--no-bootstrap@BT@ are the only options; Ctrl+C stops it.
+@BT@make configurator@BT@ is the same thing.
 
 Three presets cover the common cases:
 
@@ -253,6 +257,26 @@ features.json  ->  apply_features.py  ->  PlatformIO  ->  firmware.bin + manifes
 | Catalogue consistency | @BT@validate_catalog.py@BT@: no inconsistencies across all {n} features |
 
 ![A finished build: predicted equals measured](../../docs/img/configurator-result.png)
+
+## Design and accessibility
+
+The page is built to be used, not admired: six collapsible groups, three type
+sizes, measured costs in monospace, one live status line, and a check-your-answers
+summary before anything is written to a card. Every choice that came from
+published guidance is recorded with its source in
+[docs/UI-NOTES.md](../../docs/UI-NOTES.md), including the gaps that remain.
+
+What that means in practice:
+
+* the build button never disappears - when it cannot run it stays focusable and
+  prints the reason under it
+* an empty filter result offers *Clear filter* instead of a blank column
+* long jobs show the phase and the log, and the status line is a polite live
+  region, so a screen reader announces progress without stealing focus
+* focus is always visible, slash jumps to the filter, and the whole option row is
+  the hit target
+* the budget bar fills with a transform, not a width animation, and motion is
+  switched off entirely for readers who ask for that
 
 ## Limits
 

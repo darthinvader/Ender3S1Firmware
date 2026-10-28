@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+<a class="skip" href="#groups">Skip to the feature list</a>
 
 <header class="topbar">
   <div class="brand">
@@ -20,8 +21,8 @@
   </div>
 </header>
 
-<div id="toast" class="toast hidden"></div>
-<div id="banner" class="toast hidden" style="background:#1b2333;border-color:var(--warn);color:#ffe9bf;bottom:auto;top:84px"></div>
+<div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+<div id="banner" class="toast hidden" role="alert" style="background:#1b2333;border-color:var(--warn);color:#ffe9bf;bottom:auto;top:84px"></div>
 
 <main>
   <section class="list-col">
@@ -29,7 +30,9 @@
       <input id="filter" type="search" placeholder="Filter features by name, id or description" autocomplete="off">
       <span id="filter-count" class="hint"></span>
     </div>
-    <div id="groups" class="groups" aria-label="Features"></div>
+    <div id="groups" class="groups" aria-label="Features">
+      <p id="groups-loading" class="hint">loading the catalogue ...</p>
+    </div>
   </section>
 
   <aside class="side">
@@ -57,10 +60,10 @@
         <button id="preset-min" class="preset" data-preset="min">Minimum</button>
         <button id="preset-fit" class="preset" data-preset="fit">Add what fits</button>
       </div>
-      <div class="meshrow">
-        <label class="hint" for="mesh">Mesh size</label>
-        <select id="mesh"></select>
-      </div>
+      <fieldset class="meshrow">
+        <legend class="hint">Mesh size</legend>
+        <div id="mesh-options" class="radiogroup" role="radiogroup" aria-describedby="mesh-note"></div>
+      </fieldset>
       <p id="mesh-note" class="hint"></p>
       <div class="budget">
         <div class="budget-head"><span>Predicted flash</span><span id="predicted" class="mono">-</span></div>
@@ -101,7 +104,7 @@
     </section>
 
     <section id="status" class="card hidden">
-      <div class="status-line"><span id="phase" class="mono">queued</span><span id="jobid" class="mono muted"></span></div>
+      <div class="status-line"><span id="phase" class="mono" role="status" aria-live="polite">queued</span><span id="jobid" class="mono muted"></span></div>
       <pre id="log" class="log"></pre>
     </section>
 
@@ -117,7 +120,7 @@
         <tr><th>File</th><td id="r-size" class="mono"></td></tr>
         <tr><th>Screen</th><td id="r-screen" class="small"></td></tr>
         <tr><th>Bundle</th><td id="r-bundle" class="small muted"></td></tr>
-        <tr><th>SHA-256</th><td id="r-sha" class="mono small"></td></tr>
+        <tr><th>SHA-256</th><td><span id="r-sha" class="mono small"></span> <button id="copy-sha" class="ghost tiny" title="Copy the sha256">copy</button></td></tr>
         <tr><th>Changes</th><td id="r-changes" class="small"></td></tr>
       </table>
       <p id="r-warn" class="warn hidden"></p>
