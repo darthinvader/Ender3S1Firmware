@@ -1,0 +1,140 @@
+name: build request
+
+# A visitor cannot dispatch a workflow (that needs write access), so the site
+# asks them to open an issue with a machine-readable body. This validates it
+# strictly, builds it with the same reusable workflow, and answers in the issue.
+# No server, no token on a public page, no payment method anywhere.
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  validate:
+    name: validate the request
+    if: "startsWith(github.event.issue.title, 'build: ')"
+    runs-on: ubuntu-latest
+    outputs:
+      ok: ${ steps.parse.outputs.ok }
+      machine: ${ steps.parse.outputs.machine }
+      disable: ${ steps.parse.outputs.disable }
+      mesh: ${ steps.parse.outputs.mesh }
+      hash: ${ steps.parse.outputs.hash }
+    steps:
+      - name: Parse and validate
+        id: parse
+        env:
+          ISSUE_BODY: ${ github.event.issue.body }
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os, sys
+          body = os.environ.get("ISSUE_BODY") or ""
+          ok = "false"
+          machine = disable = mesh = hash12 = ""
+          start = body.find("{", body.find("json"))
+          end = body.rfind("}")
+          if start != -1 and end > start:
+              try:
+                  sel = json.loads(body[start:end + 1])
+                  machine = str(sel.get("machine", "ender3s1-f103"))
+                  off = sel.get("off") or []
+                  step = sel.get("mesh")
+                  allowed = [None, "", 3, 5, 7, 9]
+                  good = (
+                      machine == "ender3s1-f103"
+                      and isinstance(off, list) and len(off) <= 120
+                      and all(isinstance(x, str) and x.replace("_", "").isalnum()
+                              and 2 <= len(x) <= 48 for x in off)
+                      and step in allowed
+                  )
+                  if good:
+                      off = sorted(set(off))
+                      disable = ",".join(off)
+                      mesh = "" if step in (None, "") else str(step)
+                      line = "machine=%s;off=%s;mesh=%s" % (machine, disable, mesh)
+                      hash12 = hashlib.sha256(line.encode()).hexdigest()[:12]
+                      ok = "true"
+              except Exception as exc:
+                  print("parse failed:", exc, file=sys.stderr)
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              for key, value in (("ok", ok), ("machine", machine), ("disable", disable),
+                                 ("mesh", mesh), ("hash", hash12)):
+                  out.write(key + "=" + value + "\n")
+          print("accepted" if ok == "true" else "rejected", machine, disable, mesh, hash12)
+          PY
+
+  build:
+    name: build it
+    needs: validate
+    if: needs.validate.outputs.ok == 'true'
+    uses: ./.github/workflows/configurator.yml
+    permissions:
+      contents: write
+    with:
+      machine: ${ needs.validate.outputs.machine }
+      disable: ${ needs.validate.outputs.disable }
+      mesh: ${ needs.validate.outputs.mesh }
+
+  answer:
+    name: answer in the issue
+    needs: [validate, build]
+    if: always() && needs.validate.outputs.ok == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Comment the link and close the issue
+        env:
+          GH_TOKEN: ${ github.token }
+          REPO: ${ github.repository }
+          NUMBER: ${ github.event.issue.number }
+          TAG: ${ needs.build.outputs.tag }
+          HASH: ${ needs.validate.outputs.hash }
+          SEL_MACHINE: ${ needs.validate.outputs.machine }
+          SEL_DISABLE: ${ needs.validate.outputs.disable }
+          SEL_MESH: ${ needs.validate.outputs.mesh }
+          BUILD_RESULT: ${ needs.build.result }
+        run: |
+          set -euo pipefail
+          if [ "$BUILD_RESULT" != "success" ] || [ -z "$TAG" ]; then
+            printf 'The build for %s failed. The run is on the Actions tab and carries the compiler output.\n' "$HASH" > /tmp/comment.md
+            gh issue comment "$NUMBER" --repo "$REPO" --body-file /tmp/comment.md
+            gh issue close "$NUMBER" --repo "$REPO" --reason "not planned"
+            exit 0
+          fi
+          URL="https://github.com/$REPO/releases/download/$TAG/firmware.bin"
+          DISABLE_TEXT="$SEL_DISABLE"; [ -z "$DISABLE_TEXT" ] && DISABLE_TEXT="none"
+          MESH_TEXT="$SEL_MESH"; [ -z "$MESH_TEXT" ] && MESH_TEXT="catalogue default"
+          {
+            printf 'Built and published as a release: %s\n\n' "$TAG"
+            printf '**download:** %s\n\n' "$URL"
+            printf '| selection | value |\n|---|---|\n'
+            printf '| machine | %s |\n' "$SEL_MACHINE"
+            printf '| features disabled | %s |\n' "$DISABLE_TEXT"
+            printf '| mesh default | %s |\n' "$MESH_TEXT"
+            printf '\nThe image was verified with check-vector-table before it was published.\n'
+          } > /tmp/comment.md
+          gh issue comment "$NUMBER" --repo "$REPO" --body-file /tmp/comment.md
+          gh issue close "$NUMBER" --repo "$REPO" --reason "completed"
+
+  reject:
+    name: explain a bad request
+    needs: validate
+    if: needs.validate.outputs.ok != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Say what was wrong
+        env:
+          GH_TOKEN: ${ github.token }
+          REPO: ${ github.repository }
+          NUMBER: ${ github.event.issue.number }
+        run: |
+          printf 'This issue does not contain a valid build request. The site opens it with a JSON block in the body; a request names the machine, the feature ids to disable and an optional mesh size of 3, 5, 7 or 9.\n' > /tmp/comment.md
+          gh issue comment "$NUMBER" --repo "$REPO" --body-file /tmp/comment.md
+          gh issue close "$NUMBER" --repo "$REPO" --reason "not planned"
+

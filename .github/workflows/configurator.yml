@@ -1,9 +1,9 @@
 name: configurator
 
-# Serverless variant of tools/configurator: apply a feature selection to the
-# pinned tree, compile, verify the image and upload it as an artifact.
-# The local service (tools/configurator/server.py) is the tested path; this is
-# the same steps expressed as a workflow so a build can run without any host.
+# Serverless build of one selection: apply it to the pinned tree, compile it,
+# verify the ARM vector table, and publish build-<hash> as a release so the
+# image downloads without an account. Called directly (workflow_dispatch) or by
+# build-request.yml when a visitor asks for a selection from the site.
 on:
   workflow_dispatch:
     inputs:
@@ -19,6 +19,24 @@ on:
         description: Default bed mesh size per axis (3..9, empty = catalogue default)
         default: ''
         required: false
+  workflow_call:
+    inputs:
+      machine:
+        type: string
+        default: ender3s1-f103
+        required: false
+      disable:
+        type: string
+        default: ''
+        required: false
+      mesh:
+        type: string
+        default: ''
+        required: false
+    outputs:
+      tag:
+        description: The release tag this selection was published as
+        value: ${ jobs.build.outputs.tag }
 
 permissions:
   contents: write
@@ -28,6 +46,8 @@ jobs:
     name: configurator build
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    outputs:
+      tag: ${ steps.publish.outputs.tag }
     steps:
       - uses: actions/checkout@v4
 
@@ -40,9 +60,9 @@ jobs:
 
       - name: Apply the selection
         env:
-          MACHINE: ${{ inputs.machine }}
-          DISABLE: ${{ inputs.disable }}
-          MESH: ${{ inputs.mesh }}
+          MACHINE: ${ inputs.machine }
+          DISABLE: ${ inputs.disable }
+          MESH: ${ inputs.mesh }
         run: |
           python3 - <<'PY'
           import json, os
@@ -51,13 +71,7 @@ jobs:
           open('/tmp/selection.json', 'w').write(json.dumps(sel))
           print(json.dumps(sel))
           PY
-          python3 tools/configurator/apply_features.py \
-            --catalog tools/configurator/features.json \
-            --tree build/Ender3V2S1 \
-            --config-dir configs/Ender3S1-F1-v2 \
-            --selection @/tmp/selection.json \
-            --out build/configurator/meta.json \
-            ${MESH:+--mesh "$MESH"}
+          python3 tools/configurator/apply_features.py             --catalog tools/configurator/features.json             --tree build/Ender3V2S1             --config-dir configs/Ender3S1-F1-v2             --selection @/tmp/selection.json             --out build/configurator/meta.json             ${MESH:+--mesh "$MESH"}
 
       - name: Compile
         run: ./scripts/build.sh | tee build/configurator/build.log
@@ -80,13 +94,14 @@ jobs:
           if-no-files-found: error
 
       - name: Publish this exact selection as a release (public download, no account)
+        id: publish
         env:
-          GH_TOKEN: ${{ github.token }}
-          MACHINE: ${{ inputs.machine }}
-          DISABLE: ${{ inputs.disable }}
-          MESH: ${{ inputs.mesh }}
-          RUN_ID: ${{ github.run_id }}
-          SHA: ${{ github.sha }}
+          GH_TOKEN: ${ github.token }
+          MACHINE: ${ inputs.machine }
+          DISABLE: ${ inputs.disable }
+          MESH: ${ inputs.mesh }
+          RUN_ID: ${ github.run_id }
+          SHA: ${ github.sha }
         run: |
           set -euo pipefail
           sel="machine=${MACHINE};off=${DISABLE};mesh=${MESH}"
@@ -96,15 +111,13 @@ jobs:
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "this selection is already published as $TAG" | tee -a "$GITHUB_STEP_SUMMARY"
           else
-            gh release create "$TAG" \
-              build/configurator/firmware.bin \
-              build/configurator/meta.json \
-              build/configurator/build.log \
-              --title "Build $HASH - $MACHINE" \
-              --notes "Selection: $sel
+            gh release create "$TAG"               build/configurator/firmware.bin               build/configurator/meta.json               build/configurator/build.log               --title "Build $HASH - $MACHINE"               --notes "Selection: $sel
           Built by workflow run $RUN_ID from commit $SHA.
           The image was verified with scripts/check-vector-table.py before publishing."
             echo "published $TAG" | tee -a "$GITHUB_STEP_SUMMARY"
           fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "hash=$HASH" >> "$GITHUB_OUTPUT"
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "**download:** $URL" >> "$GITHUB_STEP_SUMMARY"
