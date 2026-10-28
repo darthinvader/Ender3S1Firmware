@@ -117,6 +117,7 @@ jobs:
           fi
           URL="https://github.com/$REPO/releases/download/$TAG/firmware.bin"
           DISABLE_TEXT="$SEL_DISABLE"; [ -z "$DISABLE_TEXT" ] && DISABLE_TEXT="none"
+          ENABLE_TEXT="$SEL_ENABLE"; [ -z "$ENABLE_TEXT" ] && ENABLE_TEXT="none"
           MESH_TEXT="$SEL_MESH"; [ -z "$MESH_TEXT" ] && MESH_TEXT="catalogue default"
           {
             printf 'Built and published as a release: %s\n\n' "$TAG"
