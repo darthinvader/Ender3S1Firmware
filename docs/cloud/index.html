@@ -361,7 +361,7 @@ function fillScreen() {
       assetLink.href = assetEntry.path ? RAW + assetEntry.path : "https://github.com/" + REPO + "/tree/main/screen/" + assetEntry.id;
       assetLink.hidden = false;
     } else assetLink.hidden = true;
-    $("screen-note").textContent = (screen.note || "").slice(0, 220);
+    $("screen-note").textContent = screen.note || "";
   };
   $("screen-os").onchange = sync;
   $("screen-assets").onchange = sync;
