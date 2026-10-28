@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ender 3 S1 firmware - a Marlin build with the receipts</title>
-<meta name="description" content="Custom Marlin firmware for a Creality Ender 3 S1: 232,344 of 233,472 bytes used, every feature cost measured, and a configurator that compiles and writes the image.">
+<title>Ender 3 S1 firmware factory - any checkpoint, measured to the byte</title>
+<meta name="description" content="A local firmware factory for Ender 3 S1-class printers: any upstream mriscoc checkpoint, 71 features, every cost measured in bytes, and a service that compiles, verifies and writes the SD card.">
 <meta property="og:image" content="img/social-preview.png">
 <style>
   :root { color-scheme: dark; }
@@ -36,10 +36,11 @@
 <body>
 <div class="wrap">
   <header>
-    <h1>Ender 3 S1 firmware</h1>
-    <p class="sub">A custom Marlin build for a Creality Ender 3 S1 on a 256 KiB STM32F103:
-      <b>232,344 of 233,472 bytes used</b>, 1,128 bytes free, and every feature cost measured by
-      compiling it on and off rather than estimated.</p>
+    <h1>Ender 3 S1 firmware factory</h1>
+    <p class="sub">Pick <b>any upstream mriscoc checkpoint</b> &mdash; release tag or branch, fetched on demand &mdash;
+      tick features, and get a compiled, verified image plus a written SD card. Every feature cost was
+      measured by compiling it on and off, so the size is predicted to the byte before anything runs.
+      The reference build: <b>232,344 of 233,472 bytes</b>, 1,128 bytes free.</p>
     <div class="badges">
       <a href="https://github.com/darthinvader/Ender3S1Firmware/actions/workflows/verify.yml"><img src="https://github.com/darthinvader/Ender3S1Firmware/actions/workflows/verify.yml/badge.svg" alt="verify"></a>
       <a href="https://github.com/darthinvader/Ender3S1Firmware/actions/workflows/build.yml"><img src="https://github.com/darthinvader/Ender3S1Firmware/actions/workflows/build.yml/badge.svg" alt="rebuild"></a>
@@ -49,21 +50,23 @@
 
   <h2>What it is</h2>
   <div class="grid">
-    <div class="card"><b>232,344 B</b><span>flash used of 233,472 B available</span></div>
-    <div class="card"><b>28,064 B</b><span>RAM used of 49,152 B</span></div>
-    <div class="card"><b>71 / 66</b><span>catalogue features / with a measured cost</span></div>
-    <div class="card"><b>0 B</b><span>predictor error on the shipped build</span></div>
+    <div class="card"><b>28</b><span>checkpoints: upstream tags, branches, and the pinned build</span></div>
+    <div class="card"><b>71 / 66</b><span>catalogue features / with a measured byte cost</span></div>
+    <div class="card"><b>0 B</b><span>predictor error on the reference build</span></div>
+    <div class="card"><b>&lt; 1 min</b><span>selection to verified image, log streaming</span></div>
   </div>
 
   <h2>The configurator</h2>
   <figure>
     <img class="shot" src="img/configurator-demo.gif" alt="The configurator building a selection">
-    <figcaption>Pick features, watch the measured budget, build, and write the SD card - one local service, no framework.</figcaption>
+    <figcaption>Seven frames: choose a checkpoint, see a measured cost, turn it off, watch the budget, build, read the verified result.</figcaption>
   </figure>
 
   <h2>What is in the repository</h2>
   <ul>
-    <li>The compiled firmware and display assets, with manifests and MD5s.</li>
+    <li>A build service that fetches any upstream checkpoint, applies a selection, compiles,
+      verifies the ARM vector table and writes both cards.</li>
+    <li>The compiled reference firmware and display assets, with manifests and MD5s.</li>
     <li>The exact configuration that produced them, and every hand edit with <code>file:line</code>.</li>
     <li>A pinned, reproducible build chain and <code>make verify</code> (checksums, ARM vector tables,
       configuration assertions, 162 documentation links, 14 live service checks).</li>

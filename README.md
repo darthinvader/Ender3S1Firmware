@@ -1,4 +1,6 @@
-# Ender 3 S1 — a custom Marlin build with the receipts
+# Ender 3 S1 firmware factory
+
+**Pick any upstream checkpoint, pick features, get a verified image and a written card — with every cost measured in bytes, not estimated.**
 
 [![firmware](https://img.shields.io/badge/firmware-v2%20%C2%B7%202026--07--30-brightgreen)](CHANGELOG.md)
 [![base](https://img.shields.io/badge/base-Marlin%202.1.4%20MRiscoC-blue)](docs/BUILD.md)
@@ -9,11 +11,11 @@
 [![rebuild](https://github.com/darthinvader/Ender3S1Firmware/actions/workflows/build.yml/badge.svg)](https://github.com/darthinvader/Ender3S1Firmware/actions/workflows/build.yml)
 [![configurator](https://github.com/darthinvader/Ender3S1Firmware/actions/workflows/configurator.yml/badge.svg)](https://github.com/darthinvader/Ender3S1Firmware/actions/workflows/configurator.yml)
 
-Custom Marlin firmware for a Creality **Ender 3 S1**: unified bed leveling with a 7x7 mesh, input shaping, linear advance, predictive temperature control and cable flashing - on a 256 KiB STM32F103 with a 28 KiB bootloader eating a tenth of it.
+This repository is a **build service for Ender 3 S1-class Marlin firmware**, plus the reference build it was written for. The service starts from **any upstream mriscoc checkpoint** — a release tag or a branch, fetched on demand — applies a feature selection, compiles it, checks the ARM vector table, and hands back an image, a manifest and a ready SD card for both the mainboard and the display.
 
-The build uses **232,344 of the 233,472 available bytes**. 1,128 bytes were left free. That constraint, not the feature list, is what this project is actually about.
+The reference build uses **232,344 of the 233,472 available bytes** — 1,128 bytes free. That constraint is why the service exists: it can tell you what a feature costs **before** it compiles, because every price in the catalogue came from building that feature on and off. On the reference build the predictor's error is **0 bytes**.
 
-This repository ships the compiled binaries, the exact configuration that produced them, a pinned reproducible build, the screen-recovery kit, and the calibration record - including the parts that did not work.
+It ships the service, the measurement harness behind the catalogue, the compiled binaries with their manifests, the screen-recovery kit, and the calibration record — including the parts that did not work.
 
 ---
 
@@ -161,7 +163,9 @@ Everything on the page is served from the same process - there is no separate fr
 
 ## Configurator (optional)
 
-![The configurator building a selection](docs/img/configurator-demo.gif)
+![The build service, step by step: choose a checkpoint, measure a feature, build, verify](docs/img/configurator-demo.gif)
+
+*Seven numbered frames: choose a checkpoint, see a measured feature cost, turn it off, watch the budget, build, read the verified result.*
 
 
 A local web app does the feature picking and the compiling for you: tick what you want, watch the flash budget, press build, download the image.

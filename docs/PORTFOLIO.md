@@ -7,35 +7,34 @@ repository, and each row links to where it is proven.
 
 ## One line
 
-> Custom Marlin firmware for a Creality Ender 3 S1 that fits a 1,128-byte
-> flash budget, with a measured feature-cost harness and a local configurator
-> that compiles, checks and writes the image.
+> A local firmware factory for Ender 3 S1-class printers: choose any upstream
+> mriscoc checkpoint, tick features, and get a verified, checksummed image and a
+> written SD card - with every feature's byte cost measured, not estimated.
 
 ## Thirty seconds
 
-I run a Ender 3 S1 on mriscoc's Professional Firmware (Marlin 2.1.x) on an
-STM32F103 with 233,472 bytes of usable flash. I specify the configuration, keep
-the build reproducible against pinned upstream commits, and measured what every
-single option costs by compiling it on and off - 66 of the 71 catalogue features
-have a real byte cost, not an estimate. On top of that I built a local
-configurator that predicts the image size to the byte, refuses combinations that
-cannot fit, compiles any mriscoc release or a git branch, and writes the SD card
-for both the mainboard and the display panel. The display bricked during the
-work; I diagnosed it, recovered it, and the recovery kit is in the repository.
+Ender 3 S1-class printers run Marlin on an STM32F103 with 233,472 bytes of usable
+flash, and a tenth of the chip is already gone to the bootloader. I built a
+local service that turns 'I want these features, on that upstream checkpoint'
+into a compiled, verified image: it fetches any mriscoc release tag or branch,
+applies a 71-feature selection, predicts the size to the byte because every
+feature's cost was measured by compiling it on and off, refuses what cannot fit,
+and writes the SD card for both processors. The reference build it was written
+for is in this repository with the full receipts; the display bricked during
+that work, and the recovery kit is here too.
 
 ## CV bullets (paste-ready)
 
-- Rebuilt a Creality Ender 3 S1 on Marlin 2.1.x / mriscoc ProUI within a
-  **1,128-byte flash margin** (232,344 of 233,472 bytes), choosing features by
-  measured cost rather than guesswork.
-- Built a **feature-cost measurement harness** (`tools/configurator/measure.py`)
-  that compiles every option on and off and writes the delta back into a
-  catalogue: 71 features, 66 measured, plus a predictor whose error on the
-  shipped build is **0 bytes**.
-- Wrote a **local configurator** (Python stdlib HTTP service + vanilla JS, no
-  framework, no build step) that compiles the selected firmware, verifies the ARM
-  vector table, and writes a bootable SD card for the mainboard and the display,
-  md5-checking every copy.
+- Built a **firmware build service** (Python stdlib HTTP service + vanilla JS, no
+  framework) that assembles custom Marlin images from **any upstream mriscoc
+  checkpoint** - release tags and branches, fetched on demand - applying a
+  71-feature selection and refusing selections that cannot fit.
+- Measured **every feature's cost** by compiling it on and off (`measure.py`) and
+  wrote the deltas back into a catalogue - 71 features, 66 measured - giving a
+  predictor whose error on the reference build is **0 bytes**.
+- Closed the loop in the service: compile, **verify the ARM vector table**, check
+  the budget, and **write a bootable FAT32 card** for the mainboard and the display
+  with md5 verification of every copy - all from the browser.
 - Recovered a **bricked display panel** by isolating a mismatched asset pack,
   and shipped the recovery kit plus the evidence trail
   ([docs/SCREEN.md](SCREEN.md)).
