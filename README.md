@@ -311,6 +311,7 @@ account action this machine cannot perform on its own. It never force-pushes.
 | [docs/index.html](docs/index.html) | The GitHub Pages landing page (live at https://darthinvader.github.io/Ender3S1Firmware/) |
 | [docs/CV-ENTRY.md](docs/CV-ENTRY.md) | The project as a CV entry - a paste-ready block, a profile paragraph and a one-liner, also as PDF and DOCX |
 | [docs/PORTFOLIO.md](docs/PORTFOLIO.md) | The project in CV form: pitch, bullets, skills with evidence, honest scope |
+| [deploy/cloudflare-pages.md](deploy/cloudflare-pages.md) | Put the builder on Cloudflare Pages: five minutes, no card, no server of your own |
 | [docs/HOSTING.md](docs/HOSTING.md) | Where the service can live for free - measured requirements, the honest comparison, and Docker/Cloudflare/systemd recipes |
 | [docs/UI-NOTES.md](docs/UI-NOTES.md) | Why the page looks and behaves like this - every rule, its published source, and the gaps |
 
