@@ -99,10 +99,16 @@ actually is.
 - Committed binaries in [firmware/](../firmware) and [screen/](../screen) with
   their manifests and MD5s.
 
+## Links
+
+- Live landing page: <https://darthinvader.github.io/Ender3S1Firmware/>
+- Repository: <https://github.com/darthinvader/Ender3S1Firmware>
+
 ## Media
 
 | | |
 |---|---|
+| ![Demo](img/configurator-demo.gif) | The configurator in motion: filter, change the mesh, build, read the result |
 | ![Configurator](img/configurator-ui.png) | The configurator: 71 features, measured costs, live flash budget |
 | ![Result](img/configurator-result.png) | A real build: flash used, prediction, error, RAM, sha256 |
 | ![Pipeline](img/build-pipeline.svg) | Configuration to flashed image, every step a script |

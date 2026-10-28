@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ender 3 S1 firmware - a Marlin build with the receipts</title>
+<meta name="description" content="Custom Marlin firmware for a Creality Ender 3 S1: 232,344 of 233,472 bytes used, every feature cost measured, and a configurator that compiles and writes the image.">
+<meta property="og:image" content="img/social-preview.png">
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0b0f16; color: #e7ecf5;
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  a { color: #6aa6ff; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px 80px; }
+  header { padding: 56px 0 28px; border-bottom: 1px solid #232d3f; }
+  h1 { font-size: 2rem; margin: 0 0 8px; letter-spacing: -.01em; }
+  .sub { color: #8b97ab; margin: 0; font-size: 1.05rem; max-width: 62ch; }
+  .badges { display: flex; gap: 8px; flex-wrap: wrap; margin: 18px 0 0; }
+  .badges img { height: 20px; }
+  h2 { font-size: .82rem; letter-spacing: .12em; text-transform: uppercase; color: #8b97ab;
+    margin: 46px 0 14px; }
+  .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+  .card { background: #121824; border: 1px solid #232d3f; border-radius: 12px; padding: 16px; }
+  .card b { display: block; font-size: 1.35rem; font-variant-numeric: tabular-nums; }
+  .card span { color: #8b97ab; font-size: .85rem; }
+  ul { padding-left: 20px; }
+  li { margin: 6px 0; }
+  img.shot { width: 100%; border-radius: 12px; border: 1px solid #232d3f; display: block; }
+  figure { margin: 0; }
+  figcaption { color: #8b97ab; font-size: .82rem; margin-top: 8px; }
+  .links { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 12px; }
+  footer { color: #8b97ab; font-size: .85rem; border-top: 1px solid #232d3f; margin-top: 54px; padding-top: 18px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Ender 3 S1 firmware</h1>
+    <p class="sub">A custom Marlin build for a Creality Ender 3 S1 on a 256 KiB STM32F103:
+      <b>232,344 of 233,472 bytes used</b>, 1,128 bytes free, and every feature cost measured by
+      compiling it on and off rather than estimated.</p>
+    <div class="badges">
+      <a href="https://github.com/darthinvader/Ender3S1Firmware/actions/workflows/verify.yml"><img src="https://github.com/darthinvader/Ender3S1Firmware/actions/workflows/verify.yml/badge.svg" alt="verify"></a>
+      <a href="https://github.com/darthinvader/Ender3S1Firmware/actions/workflows/build.yml"><img src="https://github.com/darthinvader/Ender3S1Firmware/actions/workflows/build.yml/badge.svg" alt="rebuild"></a>
+      <a href="https://github.com/darthinvader/Ender3S1Firmware/actions/workflows/configurator.yml"><img src="https://github.com/darthinvader/Ender3S1Firmware/actions/workflows/configurator.yml/badge.svg" alt="configurator"></a>
+    </div>
+  </header>
+
+  <h2>What it is</h2>
+  <div class="grid">
+    <div class="card"><b>232,344 B</b><span>flash used of 233,472 B available</span></div>
+    <div class="card"><b>28,064 B</b><span>RAM used of 49,152 B</span></div>
+    <div class="card"><b>71 / 66</b><span>catalogue features / with a measured cost</span></div>
+    <div class="card"><b>0 B</b><span>predictor error on the shipped build</span></div>
+  </div>
+
+  <h2>The configurator</h2>
+  <figure>
+    <img class="shot" src="img/configurator-demo.gif" alt="The configurator building a selection">
+    <figcaption>Pick features, watch the measured budget, build, and write the SD card - one local service, no framework.</figcaption>
+  </figure>
+
+  <h2>What is in the repository</h2>
+  <ul>
+    <li>The compiled firmware and display assets, with manifests and MD5s.</li>
+    <li>The exact configuration that produced them, and every hand edit with <code>file:line</code>.</li>
+    <li>A pinned, reproducible build chain and <code>make verify</code> (checksums, ARM vector tables,
+      configuration assertions, 162 documentation links, 14 live service checks).</li>
+    <li>A measurement harness that turned 66 features into byte costs, and a configurator that
+      predicts, compiles, verifies and writes the card.</li>
+    <li>The screen-recovery kit, including the evidence trail from the brick.</li>
+  </ul>
+
+  <h2>Read more</h2>
+  <div class="links">
+    <a href="https://github.com/darthinvader/Ender3S1Firmware/blob/main/README.md">README</a>
+    <a href="https://github.com/darthinvader/Ender3S1Firmware/blob/main/docs/PORTFOLIO.md">CV view</a>
+    <a href="https://github.com/darthinvader/Ender3S1Firmware/blob/main/docs/DESIGN-NOTES.md">Design notes</a>
+    <a href="https://github.com/darthinvader/Ender3S1Firmware/blob/main/docs/BUILD.md">Build</a>
+    <a href="https://github.com/darthinvader/Ender3S1Firmware/blob/main/docs/SCREEN.md">Screen recovery</a>
+    <a href="https://github.com/darthinvader/Ender3S1Firmware">Source</a>
+  </div>
+
+  <footer>
+    GPL-3.0. Marlin and mriscoc's Professional Firmware are upstream; the configuration, measurement,
+    configurator, documentation and verification are this project's.
+  </footer>
+</div>
+</body>
+</html>
+

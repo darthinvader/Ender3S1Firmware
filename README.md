@@ -161,6 +161,9 @@ Everything on the page is served from the same process - there is no separate fr
 
 ## Configurator (optional)
 
+![The configurator building a selection](docs/img/configurator-demo.gif)
+
+
 A local web app does the feature picking and the compiling for you: tick what you want, watch the flash budget, press build, download the image.
 
 ```bash
@@ -296,6 +299,7 @@ account action this machine cannot perform on its own. It never force-pushes.
 | [docs/DESIGN-NOTES.md](docs/DESIGN-NOTES.md) | What was enabled, what was rejected, and what the flash budget bought |
 | [CHANGELOG.md](CHANGELOG.md) | Dated history from stock firmware to the current build |
 | [tools/configurator/README.md](tools/configurator/README.md) | The configurator: feature catalogue, measured prediction accuracy, building any mriscoc release or branch |
+| [docs/index.html](docs/index.html) | The GitHub Pages landing page (live at https://darthinvader.github.io/Ender3S1Firmware/) |
 | [docs/PORTFOLIO.md](docs/PORTFOLIO.md) | The project in CV form: pitch, bullets, skills with evidence, honest scope |
 | [docs/UI-NOTES.md](docs/UI-NOTES.md) | Why the page looks and behaves like this - every rule, its published source, and the gaps |
 
