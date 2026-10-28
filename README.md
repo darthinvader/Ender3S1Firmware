@@ -90,7 +90,7 @@ Everything above is also in [docs/DESIGN-NOTES.md](docs/DESIGN-NOTES.md) with th
 |-- scripts/                   bootstrap, build, verify, flash-card
 |-- docs/                      the documentation set below
 |-- Makefile                   thin wrappers, nothing hidden
-|-- tools/configurator/        web UI + compile service (feature toggles, budget, build)
+|-- tools/configurator/        web UI + compile service (feature toggles, budget, build, any version)
 `-- .github/workflows/         checksum + config + docs verification
 ```
 
@@ -146,6 +146,20 @@ And it will not stop you from building an image that cannot fit. Over the region
 Dependencies are enforced in both directions: asking for the screen's linear-advance tuning item switches linear advance back on (`auto_added` in the manifest), turning linear advance off removes the screen item, and mutually exclusive pairs are refused before a compiler starts.
 
 Every cost is measured, not estimated: each feature was compiled, on-features by turning them off against the shipped build, off-features against a slimmed baseline with room to grow. `tools/configurator/measure.py` runs the loop, `merge_measurements.py` writes the numbers back, and the catalogue validation in `make verify` proves every define still exists exactly once. Details: [tools/configurator/README.md](tools/configurator/README.md).
+
+### Any version, not just the pinned one
+
+The page also builds mriscoc releases and branches that are not in this repository. The list comes from the GitHub API when the page loads - cached for an hour, **refresh list** asks again - with the pinned commit first, then release tags newest-first, then the active branches, each with its commit and date.
+
+| Choice | Prediction | What happens |
+|---|---|---|
+| **pinned** (default) | measured costs, exact delta against the image you run | the tree this repository is built from |
+| a release tag, e.g. `20260106` | **not measured** | *download this version* puts a shallow clone in `build/sources/`, then the same compile runs against that tree |
+| a branch, e.g. `Ender3V2S1-Bugfix` | **not measured** | same, at the commit the branch points to today |
+
+Measured costs are a property of the pinned tree, so no prediction is claimed for any other version: the budget line reads *not measured* and the result reports what the linker produced. Builds against other trees are tolerant - an option the tree does not contain is skipped and listed in the manifest (`skipped`) instead of breaking the compile - and the page lists the options that version has which the pinned release does not, before you build.
+
+![Firmware version selector](docs/img/configurator-versions.png)
 
 ## The screen is a second computer
 

@@ -100,6 +100,12 @@ def main(argv) -> int:
     ap.add_argument("--patch", default="configs/patches/0002-proui-add-ICON_ShapingZ.patch")
     ap.add_argument("--allow-overflow", action="store_true",
                     help="build even if the predicted image exceeds the region: the linker decides")
+    ap.add_argument("--tolerant", action="store_true",
+                    help="skip defines this firmware version does not have instead of failing")
+    ap.add_argument("--no-predict", action="store_true",
+                    help="the costs were measured on the pinned tree, so do not claim a prediction")
+    ap.add_argument("--source-label", default="pinned",
+                    help="which firmware version this build is from, recorded in the manifest")
     args = ap.parse_args(argv[1:])
 
     catalog = json.loads(Path(args.catalog).read_text())
@@ -189,12 +195,20 @@ def main(argv) -> int:
 
     # 3. flip and verify
     applied = []
+    skipped = []
     for fid, feat in features.items():
         want = state[fid]
         if want == default_on[fid]:
             continue
         for d in feat["defines"]:
             target = marlin / d["file"]
+            present, _ = define_state(target, d["macro"])
+            if present is None:
+                if args.tolerant:
+                    skipped.append({"feature": fid, "macro": d["macro"], "file": d["file"]})
+                    continue
+                die("macro %s is not in %s (use --tolerant for other firmware versions)"
+                    % (d["macro"], d["file"]))
             flip_on = d["on_enabled"] if want else (not d["on_enabled"])
             set_define(target, d["macro"], flip_on, d.get("value") if flip_on else None)
             got, _ = define_state(target, d["macro"])
@@ -239,7 +253,10 @@ def main(argv) -> int:
     margin = base.get("add_margin_per_feature", 0) * len(added)
     pred_flash += margin
     region = machine["flash_region"]
-    over = pred_flash - region
+    if args.no_predict:
+        pred_flash = None
+        pred_ram = None
+    over = (pred_flash - region) if pred_flash is not None else 0
     if over > 0 and not args.allow_overflow:
         die("selection is %.0f bytes over the %d byte application region "
             "(re-run with --allow-overflow to let the linker decide)" % (over, region))
@@ -256,11 +273,14 @@ def main(argv) -> int:
         "selection": {fid: state[fid] for fid in sorted(features)},
         "changed": applied,
         "predicted": {"flash": pred_flash, "ram": pred_ram, "region": region,
-                      "flash_free": region - pred_flash,
+                      "flash_free": (region - pred_flash) if pred_flash is not None else None,
+                      "measured_baseline": not args.no_predict,
                       "over_budget": over > 0, "over_by": max(0, over)},
         "source_patch": patch_result,
         "auto_added": auto_added,
         "auto_removed": auto_removed,
+        "source": args.source_label,
+        "skipped": skipped,
     }
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)

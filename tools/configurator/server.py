@@ -36,7 +36,7 @@ from pathlib import Path
 from urllib.parse import urlparse, parse_qs
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from tools.configurator import writer  # noqa: E402
+from tools.configurator import writer, sources  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 CATALOG = ROOT / "tools" / "configurator" / "features.json"
@@ -86,6 +86,50 @@ def run_streaming(job, argv, cwd):
     return proc.returncode
 
 
+def resolve_source(source_id):
+    """Map a version id to (tree, label, tolerant, measured_baseline)."""
+    if not source_id or source_id == "pinned":
+        return TREE, "pinned", False, True
+    entry = sources.get(source_id)
+    if entry is None:
+        raise RuntimeError("unknown firmware version %r" % source_id)
+    if not entry.get("path"):
+        raise RuntimeError("%s has not been downloaded yet" % entry.get("label", source_id))
+    path = ROOT / entry["path"]
+    if not (path / "Marlin" / "Configuration.h").exists():
+        raise RuntimeError("%s is incomplete on disk" % entry.get("label", source_id))
+    return path, entry.get("label", source_id), True, False
+
+
+def fetch_job(job):
+    """Download one firmware version."""
+    jobdir = JOBS / job["id"]
+    jobdir.mkdir(parents=True, exist_ok=True)
+
+    def log(msg):
+        log_line(job, msg)
+
+    with lock:
+        job.update(status="running", phase="downloading", started=now())
+    try:
+        info = sources.fetch(job["source"], log=log)
+    except Exception as exc:
+        with lock:
+            job.update(status="failed", phase="download failed", error=str(exc)[:300], finished=now())
+        return
+    catalog = json.loads(CATALOG.read_text())
+    try:
+        inspection = sources.inspect(ROOT / info["path"], catalog)
+    except Exception as exc:
+        inspection = {"error": str(exc)[:200]}
+    log("catalogue features present: %d of %d" % (inspection.get("features_present", 0),
+                                                   inspection.get("features_total", 0)))
+    log("defines this version has that the pinned tree does not: %d" % inspection.get("new_define_count", 0))
+    with lock:
+        job.update(status="succeeded", phase="downloaded", finished=now(),
+                   result={"source": info, "inspection": inspection})
+
+
 def build_job(job):
     jobdir = JOBS / job["id"]
     jobdir.mkdir(parents=True, exist_ok=True)
@@ -95,20 +139,33 @@ def build_job(job):
             job.update(status="failed", phase="no build tree", error=ready["hint"], finished=now())
         return
 
+    source_id = job.get("source") or "pinned"
+    try:
+        tree, source_label, tolerant, measured = resolve_source(source_id)
+    except Exception as exc:
+        with lock:
+            job.update(status="failed", phase="unknown firmware version", error=str(exc)[:300], finished=now())
+        return
+
     with lock:
-        job.update(status="running", phase="configuring", started=now())
+        job.update(status="running", phase="configuring", started=now(), source_label=source_label)
     sel = {"machine": job["machine"], "on": job["on"], "off": job["off"]}
     sel_path = jobdir / "selection.json"
     sel_path.write_text(json.dumps(sel, indent=2))
 
     apply_cmd = [sys.executable, str(APPLY),
                  "--catalog", str(CATALOG),
-                 "--tree", str(TREE),
+                 "--tree", str(tree),
                  "--config-dir", str(ROOT / "configs" / "Ender3S1-F1-v2"),
                  "--selection", "@" + str(sel_path),
-                 "--out", str(jobdir / "predicted.json")]
+                 "--out", str(jobdir / "predicted.json"),
+                 "--source-label", source_label]
     if job.get("allow_overflow"):
         apply_cmd.append("--allow-overflow")
+    if tolerant:
+        apply_cmd.append("--tolerant")
+    if not measured:
+        apply_cmd.append("--no-predict")
     rc = run_streaming(job, apply_cmd, ROOT)
     if rc != 0:
         with lock:
@@ -127,13 +184,13 @@ def build_job(job):
     except Exception:
         env = "STM32F103RC_creality"
 
-    rc = run_streaming(job, [str(PIO), "run", "-e", env], TREE)
+    rc = run_streaming(job, [str(PIO), "run", "-e", env], tree)
     build_log = "".join(job["log"])
 
     flash = FLASH_RE.search(build_log)
     ram = RAM_RE.search(build_log)
     binpath = None
-    produce = TREE / ".pio" / "build" / env
+    produce = tree / ".pio" / "build" / env
     candidates = sorted(produce.glob("firmware-*.bin"), key=lambda p: p.stat().st_mtime, reverse=True)
     if not candidates and (produce / "firmware.bin").exists():
         candidates = [produce / "firmware.bin"]
@@ -292,6 +349,8 @@ def worker():
         try:
             if job.get("kind") == "write":
                 write_job(job)
+            elif job.get("kind") == "fetch":
+                fetch_job(job)
             else:
                 build_job(job)
         except Exception as exc:  # keep the worker alive
@@ -338,6 +397,23 @@ class Handler(BaseHTTPRequestHandler):
             catalog = json.loads(CATALOG.read_text())
             catalog["build"] = tree_ready()
             return self._json(catalog)
+        if path == "/api/versions":
+            try:
+                data = sources.list_versions(refresh="refresh=1" in self.path)
+                return self._json(data)
+            except Exception as exc:
+                return self._json({"error": str(exc)[:300]}, 500)
+        if path == "/api/versions/inspect":
+            query = parse_qs(urlparse(self.path).query)
+            version_id = (query.get("id") or [""])[0]
+            entry = sources.get(version_id)
+            if entry is None or not entry.get("path"):
+                return self._json({"error": "that version is not downloaded yet"}, 404)
+            try:
+                catalog = json.loads(CATALOG.read_text())
+                return self._json(sources.inspect(ROOT / entry["path"], catalog))
+            except Exception as exc:
+                return self._json({"error": str(exc)[:300]}, 500)
         if path == "/api/devices":
             try:
                 devices = writer.list_devices()
@@ -368,7 +444,8 @@ class Handler(BaseHTTPRequestHandler):
                 view = {k: job.get(k) for k in
                         ("id", "status", "phase", "machine", "created", "finished",
                          "predicted", "result", "error", "manifest", "diff", "warnings",
-                         "screen_os", "screen_assets", "kind", "device", "parts")}
+                         "screen_os", "screen_assets", "kind", "device", "parts",
+                         "source", "source_label")}
                 view["on"] = job.get("on", [])
                 view["off"] = job.get("off", [])
                 view["log"] = job["log"][-60:]
@@ -455,6 +532,30 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _fetch_version(self):
+        """POST /api/versions/fetch - download one firmware version."""
+        length = int(self.headers.get("Content-Length") or 0)
+        try:
+            body = json.loads(self.rfile.read(length) or b"{}")
+        except Exception:
+            return self._json({"error": "bad json"}, 400)
+        version_id = body.get("id") or ""
+        entry = sources.get(version_id)
+        if entry is None:
+            return self._json({"error": "unknown version %r" % version_id}, 400)
+        if entry.get("kind") == "pinned":
+            return self._json({"error": "the pinned tree is already here"}, 400)
+        if entry.get("path"):
+            return self._json({"id": None, "status": "already", "path": entry["path"]}, 200)
+
+        jid = uuid.uuid4().hex[:12]
+        job = {"id": jid, "kind": "fetch", "status": "queued", "phase": "queued",
+               "source": version_id, "created": now(), "log": [], "result": None}
+        with lock:
+            jobs[jid] = job
+        work.put(job)
+        return self._json({"id": jid, "status": "queued"}, 202)
+
     def _write(self):
         """POST /api/write - format a device and put the selected payloads on it."""
         length = int(self.headers.get("Content-Length") or 0)
@@ -506,6 +607,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = urlparse(self.path).path
+        if path == "/api/versions/fetch":
+            return self._fetch_version()
         if path == "/api/write":
             return self._write()
         if path != "/api/build":
@@ -552,6 +655,7 @@ class Handler(BaseHTTPRequestHandler):
         job = {"id": jid, "kind": "build", "status": "queued", "phase": "queued", "machine": machine,
                "on": on, "off": off, "screen_os": os_id, "screen_assets": assets_id,
                "allow_overflow": bool(body.get("allow_overflow")),
+               "source": body.get("source") or "pinned",
                "created": now(), "log": [], "predicted": None, "result": None}
         with lock:
             jobs[jid] = job

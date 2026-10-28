@@ -186,3 +186,9 @@ button.small-btn { padding: 7px 10px; font-size: .78rem; }
 
 footer { padding: 0 22px 30px; color: var(--muted); font-size: .8rem; }
 footer p { margin: 0; }
+
+.deflist { margin: 6px 0 0; padding-left: 16px; font-size: .76rem; color: var(--muted);
+  max-height: 160px; overflow-y: auto; }
+.deflist li { margin-bottom: 2px; }
+.deflist code { color: var(--ink); }
+details summary { cursor: pointer; }

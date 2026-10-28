@@ -33,6 +33,23 @@
   </section>
 
   <aside class="side">
+    <section class="card" id="source-card">
+      <h2>Firmware version</h2>
+      <select id="source"></select>
+      <div class="row2" style="margin-top:6px">
+        <button id="source-fetch" class="ghost small-btn">download this version</button>
+        <button id="source-refresh" class="ghost small-btn" title="Ask GitHub for the list again">refresh list</button>
+      </div>
+      <p id="source-note" class="hint"></p>
+      <div id="source-extra" class="hidden">
+        <p id="source-compat" class="hint"></p>
+        <details id="source-new">
+          <summary class="hint"></summary>
+          <ul id="source-new-list" class="deflist"></ul>
+        </details>
+      </div>
+    </section>
+
     <section class="card">
       <h2>Build</h2>
       <div class="presets">

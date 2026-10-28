@@ -29,6 +29,23 @@ The page always shows whether the current selection is **bigger or smaller than 
 * **Modals** close on Escape, confirm on Enter, and return focus to where it was.
 * The footer carries the date the costs were measured, so a stale catalogue is visible rather than implied.
 
+## Firmware versions
+
+The page builds the pinned commit by default, and it can also build any release tag or branch mriscoc has published. Nothing is hardcoded: the list comes from the GitHub API when the page loads, is cached for an hour, and re-reads on **refresh list**.
+
+| Choice | Prediction | What the build does |
+|---|---|---|
+| **pinned** (default) | measured costs, the exact delta against your current image | the tree this repository is built from |
+| a release tag, e.g. `20260106` | not measured | **download this version** puts a shallow clone in `build/sources/<id>/`, then the same compile runs against it |
+| a branch, e.g. `Ender3V2S1-Bugfix` | not measured | same, at the commit the branch points to when you download it |
+
+Measured costs are a property of the pinned tree, so the page does not predict for any other version: the budget line reads **not measured**, the build button stops applying the over-budget gate, and the result reports the size the linker actually produced.
+
+Two details make older trees usable rather than fatal:
+
+* **Tolerant application.** A catalogue option that a tree does not contain is skipped and listed in the manifest under `skipped`, instead of failing the compile - so this configuration still builds on a 2024 tree that predates a define.
+* **What is new.** Before you build, the page compares the version's `Configuration.h` and `Configuration_adv.h` with the pinned release's (fetched from the same commit, not from the working tree) and lists the options the version has that the pinned one does not.
+
 ## What a build gives you
 
 | Artifact | What it is |

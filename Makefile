@@ -16,6 +16,8 @@ verify:
 	./scripts/verify-artifacts.sh
 	python3 scripts/check-docs.py .
 	python3 tools/configurator/validate_catalog.py
+	python3 -m py_compile tools/configurator/*.py
+	python3 tools/configurator/sources.py --list --offline > /dev/null
 
 docs:
 	python3 scripts/check-docs.py .

@@ -9,6 +9,9 @@ const app = {
   collapsed: {},
   showUnavailable: false,
   devices: [],
+  versions: null,
+  sourceId: "pinned",
+  sourceInspect: null,
   build: null,
   busy: false,
   pollTimer: null,
@@ -34,12 +37,141 @@ function toast(message, kind) {
   toast._t = setTimeout(() => el.classList.add('hidden'), 5000);
 }
 
+// ------------------------------------------------------------- firmware source
+const isPinned = () => app.sourceId === "pinned";
+function currentVersion() {
+  return (app.versions || []).find((v) => v.id === app.sourceId) || null;
+}
+
+async function loadVersions(refresh) {
+  try {
+    const res = await fetch("/api/versions" + (refresh ? "?refresh=1" : ""));
+    app.versions = (await res.json()).versions || [];
+  } catch (e) {
+    app.versions = [];
+    toast("Could not read the version list: " + e.message);
+  }
+  renderSources();
+}
+
+function renderSources() {
+  const sel = $("source");
+  const keep = app.sourceId;
+  sel.innerHTML = "";
+  for (const v of app.versions) {
+    const o = document.createElement("option");
+    const bits = [v.label];
+    if (v.sha) bits.push(v.sha);
+    if (v.date) bits.push(v.date);
+    if (v.kind !== "pinned" && !v.fetched) bits.push("not downloaded");
+    o.value = v.id;
+    o.textContent = bits.join("  -  ");
+    sel.appendChild(o);
+  }
+  if (![...sel.options].some((o) => o.value === keep)) app.sourceId = "pinned";
+  sel.value = app.sourceId;
+  sel.onchange = () => {
+    app.sourceId = sel.value;
+    app.sourceInspect = null;
+    renderSources();
+    renderBudget();
+    inspectSource();
+  };
+  $("source-fetch").disabled = isPinned() || !!(currentVersion() || {}).fetched;
+  renderSourceNote();
+}
+
+function renderSourceNote() {
+  const v = currentVersion();
+  const note = $("source-note");
+  const extra = $("source-extra");
+  extra.classList.add("hidden");
+  $("source-fetch").disabled = isPinned() || !!(v || {}).fetched;
+  if (!v || isPinned()) {
+    note.textContent = "The commit this repository was built from: measured costs, presets and the write panel all apply to it.";
+    return;
+  }
+  const bits = [];
+  bits.push(v.kind === "tag" ? "release " + v.ref : "branch " + v.ref);
+  if (v.date) bits.push("published " + v.date);
+  bits.push("commit " + v.sha);
+  bits.push(v.fetched ? "downloaded" : "not downloaded yet - the size is only known after compiling");
+  note.textContent = bits.join("  -  ");
+  if (v.fetched && app.sourceInspect) renderInspect();
+}
+
+function renderInspect() {
+  const i = app.sourceInspect;
+  if (!i) return;
+  $("source-extra").classList.remove("hidden");
+  const missing = (i.features_missing || []).length;
+  const extra = i.new_define_count;
+  $("source-compat").textContent =
+    i.features_present + " of " + i.features_total + " catalogue features exist in this version" +
+    (missing ? "; " + missing + " will be skipped" : "") +
+    (extra ? ".  It has " + extra + (extra === 1 ? " option" : " options") + " the pinned tree does not." : ".");
+  const det = $("source-new");
+  det.classList.toggle("hidden", !i.new_define_count);
+  det.querySelector("summary").textContent = i.new_define_count + " option(s) this version has that your build does not";
+  const list = $("source-new-list");
+  list.innerHTML = "";
+  for (const d of (i.new_defines || []).slice(0, 40)) {
+    const li = document.createElement("li");
+    const code = document.createElement("code");
+    code.textContent = d.macro;
+    li.appendChild(code);
+    if (d.note) li.appendChild(document.createTextNode("  " + d.note));
+    list.appendChild(li);
+  }
+}
+
+async function inspectSource() {
+  if (isPinned()) return;
+  try {
+    const res = await fetch("/api/versions/inspect?id=" + encodeURIComponent(app.sourceId));
+    if (!res.ok) return;
+    app.sourceInspect = await res.json();
+    renderInspect();
+  } catch (e) { /* informational only */ }
+}
+
+async function fetchVersion() {
+  const v = currentVersion();
+  if (!v || isPinned()) return;
+  app.busy = true;
+  $("source-fetch").disabled = true;
+  $("source-note").textContent = "downloading " + v.label + " ...";
+  $("status").classList.remove("hidden");
+  $("phase").textContent = "downloading";
+  $("log").textContent = "";
+  try {
+    const res = await fetch("/api/versions/fetch", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: v.id })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
+    if (data.status === "already") {
+      app.busy = false;
+      await loadVersions(false);
+      renderBudget();
+      return;
+    }
+    $("jobid").textContent = data.id;
+    poll(data.id);
+  } catch (e) {
+    app.busy = false;
+    toast("Download failed: " + e.message);
+    renderSources();
+  }
+}
+
 // ---------------------------------------------------------------- selection
 function signature() {
   const on = [];
   for (const f of app.catalog.features) if (app.state[f.id]) on.push(f.id);
   // the screen package is copied onto the card, not compiled: it is deliberately not part of this
-  return [machine(), on.join(',')].join('|');
+  return [machine(), app.sourceId, on.join(',')].join('|');
 }
 function buildFresh() { return !!app.build && app.build.signature === signature(); }
 
@@ -56,6 +188,34 @@ function predicted() {
   const margin = (base.add_margin_per_feature || 0) *
     app.catalog.features.filter((f) => app.state[f.id] && !f.on_by_default).length;
   return { flash: flash + margin, ram: ram, margin: margin };
+}
+
+function renderUnmeasured(m) {
+  const v = currentVersion() || { label: app.sourceId };
+  $('predicted').textContent = 'not measured';
+  $('bar').classList.remove('over');
+  $('bar-used').style.width = '0%';
+  $('bar-over').style.width = '0%';
+  $('free').textContent = 'size known after compiling';
+  $('region').textContent = fmt(m.flash_region) + ' B region';
+  const el = $('delta');
+  el.textContent = 'Costs were measured on the pinned tree, so no prediction is claimed for ' + (v.label || 'this version') + '.';
+  el.className = 'delta';
+  $('ramline').textContent = 'RAM unknown until it links';
+  const usableCount = app.catalog.features.filter(usable);
+  const onCount = usableCount.filter((f) => app.state[f.id]).length;
+  $('countline').textContent = onCount + ' of ' + usableCount.length + ' usable features on - the build reports the real size';
+  $('budget-warn').classList.add('hidden');
+
+  const build = $('build');
+  build.classList.remove('over');
+  build.textContent = 'Build this version';
+  build.disabled = app.busy || !app.catalog.build.toolchain_ready;
+  $('build-note').textContent = (v.fetched
+    ? 'Builds ' + v.label + ' at ' + v.sha + '. Features this version lacks are skipped, and the result is the truth about its size.'
+    : 'Download this version first.');
+  build.disabled = build.disabled || !v.fetched;
+  updateWriteState();
 }
 
 function applyRequires(fid, value) {
@@ -246,6 +406,7 @@ function syncCheckboxes() {
 function renderBudget() {
   const m = machineById(machine());
   const region = m.flash_region;
+  if (!isPinned()) { renderUnmeasured(m); return; }
   const p = predicted();
   const over = Math.max(0, p.flash - region);
   const used = Math.min(p.flash, region);
@@ -379,10 +540,11 @@ function applyPreset(name) {
 
 // --------------------------------------------------------------------- build
 async function startBuild() {
+  const pinned = isPinned();
   const p = predicted();
   const region = machineById(machine()).flash_region;
   let allowOverflow = false;
-  if (p.flash > region) {
+  if (pinned && p.flash > region) {
     allowOverflow = await modal(
       'This image will not fit on this board',
       '<p>Prediction: <b>' + fmt(p.flash) + ' B</b> against the application region of <b>' + fmt(region) +
@@ -409,6 +571,7 @@ async function startBuild() {
   $('status').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 
   const payload = { machine: machine(), on: [], off: [], allow_overflow: allowOverflow,
+    source: app.sourceId,
     screen_os: $('screen-os').value, screen_assets: $('screen-assets').value };
   for (const f of app.catalog.features) (app.state[f.id] ? payload.on : payload.off).push(f.id);
 
@@ -434,7 +597,9 @@ function poll(id) {
     $('phase').textContent = j.phase || j.status;
     if (j.log) { $('log').textContent = j.log.join('\n'); $('log').scrollTop = $('log').scrollHeight; }
     if (j.status === 'succeeded') {
-      if (j.kind === 'write') { finish(); showWriteResult(j); } else { finish(); showResult(j); }
+      if (j.kind === 'write') { finish(); showWriteResult(j); }
+      else if (j.kind === 'fetch') { finish(); showFetchedVersion(j); }
+      else { finish(); showResult(j); }
       return;
     }
     if (j.status === 'failed') {
@@ -454,6 +619,17 @@ function updateBundleLink(id) {
     '&assets=' + encodeURIComponent($('screen-assets').value);
 }
 
+async function showFetchedVersion(j) {
+  const r = j.result || {};
+  const info = r.source || {};
+  toast((info.label || info.ref || 'version') + ' downloaded at ' + (info.sha || '?'), 'info');
+  await loadVersions(false);
+  if (info.id) app.sourceId = info.id;
+  renderSources();
+  await inspectSource();
+  renderBudget();
+}
+
 function showResult(j) {
   const r = j.result;
   app.build = { id: j.id, signature: app.pending ? app.pending.signature : signature(),
@@ -462,9 +638,14 @@ function showResult(j) {
   $('r-flash').textContent = fmt(r.flash_used) + ' / ' + fmt(r.flash_region) + ' B (' + r.flash_percent + '%)';
   const diff = r.flash_used - runningFlash();
   $('r-delta').textContent = diff === 0 ? 'same size' : (diff < 0 ? fmt(-diff) + ' B smaller' : fmt(diff) + ' B larger');
-  $('r-pred').textContent = fmt(j.predicted.flash) + ' B';
-  const err = r.flash_used - j.predicted.flash;
-  $('r-err').textContent = err === 0 ? 'exact' : signed(err) + ' B';
+  if (j.predicted && j.predicted.flash !== null && j.predicted.flash !== undefined) {
+    $('r-pred').textContent = fmt(j.predicted.flash) + ' B';
+    const err = r.flash_used - j.predicted.flash;
+    $('r-err').textContent = err === 0 ? 'exact' : signed(err) + ' B';
+  } else {
+    $('r-pred').textContent = 'not measured for this version';
+    $('r-err').textContent = '-';
+  }
   $('r-ram').textContent = fmt(r.ram_used) + ' / ' + fmt(r.ram_total) + ' B';
   $('r-size').textContent = fmt(r.file_size) + ' B';
   $('r-sha').textContent = r.sha256;
@@ -612,6 +793,8 @@ async function boot() {
   $('build').onclick = startBuild;
   $('write').onclick = doWrite;
   $('refresh-devices').onclick = loadDevices;
+  $('source-fetch').onclick = fetchVersion;
+  $('source-refresh').onclick = () => loadVersions(true);
   $('part-board').onchange = updateWriteState;
   $('part-screen').onchange = updateWriteState;
   $('filter').oninput = (e) => { app.filter = e.target.value; renderGroups(); };
@@ -637,6 +820,7 @@ async function boot() {
     $('banner').classList.remove('hidden');
     $('banner').textContent = 'Build tree not ready: ' + app.catalog.build.hint;
   }
+  await loadVersions(false);
   await loadDevices();
 }
 
