@@ -165,7 +165,7 @@ Everything on the page is served from the same process - there is no separate fr
 
 ![The build service, step by step: choose a checkpoint, measure a feature, build, verify](docs/img/configurator-demo.gif)
 
-*Seven numbered frames: choose a checkpoint, see a measured feature cost, turn it off, watch the budget, build, read the verified result.*
+*Eight numbered frames, each one ringed on the control it talks about: pick a checkpoint, filter a feature, see its measured cost, turn it off, watch the budget, build, read the verified result, and write the card.*
 
 
 A local web app does the feature picking and the compiling for you: tick what you want, watch the flash budget, press build, download the image.
