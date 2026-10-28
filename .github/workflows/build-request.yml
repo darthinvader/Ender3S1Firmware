@@ -30,6 +30,7 @@ jobs:
         id: parse
         env:
           ISSUE_BODY: ${{ github.event.issue.body }}
+          REPO: ${{ github.repository }}
         run: |
           python3 - <<'PY'
           import hashlib, json, os, sys
