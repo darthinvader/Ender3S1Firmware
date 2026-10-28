@@ -386,6 +386,15 @@ async function update() {
         return;
       }
     }
+    const region = (state.catalog.machines.find((m) => m.supported) || {}).flash_region || 233472;
+    const overBy = predicted().flash - region;
+    if (overBy > 0) {
+      status.className = "status bad";
+      status.textContent = "this selection is " + fmt(overBy) + " B (" + mb(overBy) +
+        ") over the " + fmt(region) + " B region - switch something off before requesting it.";
+      el("request").hidden = true;
+      return;
+    }
     status.className = "status warn";
     status.textContent = "not built yet. A request opens a GitHub issue; the workflow builds it and replies there.";
     el("request").href = issueUrl;

@@ -107,10 +107,14 @@ jobs:
           SEL_ENABLE: ${{ needs.validate.outputs.enable }}
           SEL_MESH: ${{ needs.validate.outputs.mesh }}
           BUILD_RESULT: ${{ needs.build.result }}
+          SERVER: ${{ github.server_url }}
+          RUN_ID: ${{ github.run_id }}
         run: |
           set -euo pipefail
           if [ "$BUILD_RESULT" != "success" ] || [ -z "$TAG" ]; then
-            printf 'The build for %s failed. The run is on the Actions tab and carries the compiler output.\n' "$HASH" > /tmp/comment.md
+            printf 'The build for %s failed.\n\n' "$HASH" > /tmp/comment.md
+            printf 'The run is here: %s/%s/actions/runs/%s\n\n' "$SERVER" "$REPO" "$RUN_ID" >> /tmp/comment.md
+            printf 'The usual cause is a selection that does not fit the 233,472 B region: the budget check stops before the compiler, and the log names the overflow in bytes. Switch a feature off and ask again.\n' >> /tmp/comment.md
             gh issue comment "$NUMBER" --repo "$REPO" --body-file /tmp/comment.md
             gh issue close "$NUMBER" --repo "$REPO" --reason "not planned"
             exit 0
