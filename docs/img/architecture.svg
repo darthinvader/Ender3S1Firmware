@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="430" viewBox="0 0 960 430" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+<rect x="0" y="0" width="960" height="430" rx="10" fill="#ffffff" stroke="#d1d9e0"/>
+<text x="30" y="40" font-size="19" font-weight="600" fill="#1f2328">What this project actually is: one 256 KiB target, two processors, one build chain</text>
+<text x="30" y="62" font-size="13" fill="#59636e">Everything on this diagram is either a script in this repository or an artifact it produces and checksums</text>
+
+<!-- mainboard -->
+<rect x="30" y="96" width="300" height="150" rx="10" fill="#f6f8fa" stroke="#d1d9e0"/>
+<text x="48" y="122" font-size="14" font-weight="600" fill="#1f2328">Mainboard - STM32F103RCT6</text>
+<text x="48" y="144" font-size="12" fill="#59636e">Marlin bugfix-2.1.x, mriscoc ProUI base</text>
+<text x="48" y="164" font-size="12" fill="#59636e">app region 233,472 B of 256 KiB flash</text>
+<text x="48" y="184" font-size="12" fill="#59636e">28,064 B of 48 KiB RAM</text>
+<text x="48" y="206" font-size="12" fill="#1f2328">build 232,344 B - 1,128 B free</text>
+<text x="48" y="228" font-size="12" fill="#59636e">UBL 7x7, input shaping, linear advance, MPC</text>
+
+<!-- screen -->
+<rect x="366" y="96" width="240" height="150" rx="10" fill="#f6f8fa" stroke="#d1d9e0"/>
+<text x="384" y="122" font-size="14" font-weight="600" fill="#1f2328">Display panel - own MCU</text>
+<text x="384" y="144" font-size="12" fill="#59636e">OS image + menu assets on its own card</text>
+<text x="384" y="164" font-size="12" fill="#59636e">menus are drawn from mainboard defines</text>
+<text x="384" y="186" font-size="12" fill="#1f2328">pairing is enforced by the configurator</text>
+<text x="384" y="208" font-size="12" fill="#59636e">recovered from a brick in this project</text>
+
+<!-- configurator -->
+<rect x="642" y="96" width="288" height="150" rx="10" fill="#f6f8fa" stroke="#d1d9e0"/>
+<text x="660" y="122" font-size="14" font-weight="600" fill="#1f2328">Configurator - local service</text>
+<text x="660" y="144" font-size="12" fill="#59636e">71 features, 66 costs measured by build</text>
+<text x="660" y="164" font-size="12" fill="#59636e">predicts size to the byte, refuses overflow</text>
+<text x="660" y="186" font-size="12" fill="#59636e">builds any mriscoc release or branch</text>
+<text x="660" y="208" font-size="12" fill="#59636e">writes the SD card, md5-checks every copy</text>
+
+<!-- arrows -->
+<path d="M330 171 L366 171" stroke="#59636e" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M606 171 L642 171" stroke="#59636e" stroke-width="1.5" marker-end="url(#a)"/>
+<defs><marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#59636e"/></marker></defs>
+
+<!-- pipeline -->
+<text x="30" y="292" font-size="13" font-weight="600" fill="#1f2328">Reproducible chain</text>
+<g font-size="12" fill="#1f2328">
+  <rect x="30" y="310" width="132" height="46" rx="8" fill="#eef4ff" stroke="#b6cdf7"/><text x="46" y="338">pinned commits</text>
+  <rect x="178" y="310" width="132" height="46" rx="8" fill="#eef4ff" stroke="#b6cdf7"/><text x="194" y="338">configs/ applied</text>
+  <rect x="326" y="310" width="132" height="46" rx="8" fill="#eef4ff" stroke="#b6cdf7"/><text x="342" y="338">PlatformIO build</text>
+  <rect x="474" y="310" width="132" height="46" rx="8" fill="#eef4ff" stroke="#b6cdf7"/><text x="490" y="338">vector + md5 gate</text>
+  <rect x="622" y="310" width="132" height="46" rx="8" fill="#eef4ff" stroke="#b6cdf7"/><text x="638" y="338">firmware/ committed</text>
+  <rect x="770" y="310" width="160" height="46" rx="8" fill="#e8f7ee" stroke="#a7d8b7"/><text x="786" y="338">make verify + CI</text>
+</g>
+<path d="M162 333 L178 333 M310 333 L326 333 M458 333 L474 333 M606 333 L622 333 M754 333 L770 333" stroke="#59636e" stroke-width="1.5"/>
+
+<text x="30" y="392" font-size="12" fill="#59636e">Measured, not assumed: every feature cost in the catalogue comes from compiling it on and off against the shipped build.</text>
+<text x="30" y="410" font-size="12" fill="#59636e">The binaries are committed with their manifests, so the claims in this repository can be checked without owning the printer.</text>
+</svg>
+

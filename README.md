@@ -15,6 +15,8 @@ This repository ships the compiled binaries, the exact configuration that produc
 
 ---
 
+**For hiring managers and reviewers:** [docs/PORTFOLIO.md](docs/PORTFOLIO.md) is the same project in CV form - one line, four bullets, the skills with a receipt for each, and an explicit split between what I wrote and what is upstream. Everything in it is checkable from this repository.
+
 ## What this is
 
 | | |
@@ -39,6 +41,8 @@ The replacement had to deliver four things at once:
 4. **A hotend model that does not oscillate** - solved with MPC replacing PID.
 
 All four had to fit in a region that was already 88 % full. [docs/DESIGN-NOTES.md](docs/DESIGN-NOTES.md) is the engineering account of what was paid for what.
+
+![What the project is](docs/img/architecture.svg)
 
 ## The constraint, in one picture
 
@@ -290,6 +294,7 @@ account action this machine cannot perform on its own. It never force-pushes.
 | [docs/DESIGN-NOTES.md](docs/DESIGN-NOTES.md) | What was enabled, what was rejected, and what the flash budget bought |
 | [CHANGELOG.md](CHANGELOG.md) | Dated history from stock firmware to the current build |
 | [tools/configurator/README.md](tools/configurator/README.md) | The configurator: feature catalogue, measured prediction accuracy, building any mriscoc release or branch |
+| [docs/PORTFOLIO.md](docs/PORTFOLIO.md) | The project in CV form: pitch, bullets, skills with evidence, honest scope |
 | [docs/UI-NOTES.md](docs/UI-NOTES.md) | Why the page looks and behaves like this - every rule, its published source, and the gaps |
 
 ## Compatibility - read before flashing
