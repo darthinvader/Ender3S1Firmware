@@ -117,7 +117,7 @@
 const REPO = "darthinvader/Ender3S1Firmware";
 const CATALOG_URL = "https://raw.githubusercontent.com/" + REPO + "/main/tools/configurator/features.json";
 const FENCE = String.fromCharCode(96).repeat(3);
-const state = { catalog: null, off: new Set(), mesh: 7, tag: null };
+const state = { catalog: null, off: new Set(), mesh: 7, tag: null, gen: 0 };
 
 function el(id) { return document.getElementById(id); }
 
@@ -228,6 +228,7 @@ async function sha256Hex(text) {
 }
 
 async function update() {
+  const gen = ++state.gen;
   const off = Array.from(state.off).sort();
   el("off-count").textContent = String(off.length);
   el("mesh-value").textContent = String(state.mesh);
@@ -251,6 +252,7 @@ async function update() {
   try {
     const res = await fetch("https://api.github.com/repos/" + REPO + "/releases/tags/" + tag,
       { headers: { accept: "application/vnd.github+json" } });
+    if (gen !== state.gen) return;
     if (res.ok) {
       const release = await res.json();
       const asset = (release.assets || []).find((a) => a.name === "firmware.bin");
@@ -269,6 +271,7 @@ async function update() {
     el("request").href = issueUrl;
     el("request").hidden = false;
   } catch (error) {
+    if (gen !== state.gen) return;
     status.className = "status bad";
     status.textContent = "could not reach GitHub to check: " + error.message;
     el("request").href = issueUrl;
