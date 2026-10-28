@@ -157,7 +157,7 @@ The page also builds mriscoc releases and branches that are not in this reposito
 | a release tag, e.g. `20260106` | **not measured** | *download this version* puts a shallow clone in `build/sources/`, then the same compile runs against that tree |
 | a branch, e.g. `Ender3V2S1-Bugfix` | **not measured** | same, at the commit the branch points to today |
 
-Measured costs are a property of the pinned tree, so no prediction is claimed for any other version: the budget line reads *not measured* and the result reports what the linker produced. Builds against other trees are tolerant - an option the tree does not contain is skipped and listed in the manifest (`skipped`) instead of breaking the compile - and the page lists the options that version has which the pinned release does not, before you build.
+Measured costs are a property of the pinned tree, so no prediction is claimed for any other version: the budget line reads *not measured* and the result reports what the linker produced. Very old trees stop at the dependency scan for a reason they name themselves - 2022 predates `DGUS_UI_IS` and ProUIex, so it cannot compile this configuration, and no image is produced. Builds against other trees are tolerant - an option the tree does not contain is skipped and listed in the manifest (`skipped`) instead of breaking the compile - and the page lists the options that version has which the pinned release does not, before you build.
 
 ![Firmware version selector](docs/img/configurator-versions.png)
 
@@ -257,7 +257,7 @@ account action this machine cannot perform on its own. It never force-pushes.
 | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Every failure this machine produced, with symptom, cause and fix |
 | [docs/DESIGN-NOTES.md](docs/DESIGN-NOTES.md) | What was enabled, what was rejected, and what the flash budget bought |
 | [CHANGELOG.md](CHANGELOG.md) | Dated history from stock firmware to the current build |
-| [tools/configurator/README.md](tools/configurator/README.md) | The configurator: feature catalogue, compile service, measured prediction accuracy |
+| [tools/configurator/README.md](tools/configurator/README.md) | The configurator: feature catalogue, measured prediction accuracy, building any mriscoc release or branch |
 
 ## Compatibility - read before flashing
 

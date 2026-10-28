@@ -285,6 +285,9 @@ features.json  ->  apply_features.py  ->  PlatformIO  ->  firmware.bin + manifes
 * **This service runs a compiler.** It binds to `127.0.0.1` and has no authentication. Do not expose it to a network you do not control.
 * **One job at a time**, queue depth 4. A cold tree is refused with a pointer to `./scripts/bootstrap.sh`.
 * **Curated, not exhaustive.** Marlin has hundreds of options; the catalogue carries the ones that mean something on this machine. Adding another is one entry plus one measurement run.
+* **Other versions are compiled, not measured.** The page predicts only for the pinned tree, because a cost belongs to the tree it was measured on. For every other version the result panel reports the size the linker produced and nothing more.
+* **Old trees hit vocabulary drift.** Tolerant application skips defines a tree does not contain, but it cannot translate a configuration written for a newer Marlin into an older one: `20260106` (January 2026) and `Ender3V2S1-Bugfix` (September 2026) both build, while `20220719` fails the dependency scan with the tree's own error, HAS_GCODE_PREVIEW requires ProUIex - the 2022 tree has no DGUS_UI_IS macro and no ProUIex. The failure names itself in the log and no image is produced.
+* **Downloads are shallow clones.** About 200 MB per release tag into `build/sources/`, kept until you delete the directory; the version list itself is one cached GitHub API call.
 * **Marginal costs.** Each price is the cost of that feature against the two baselines above; two features that share code can interact by a few bytes of alignment. The result panel always shows the exact measured size of the selection you built, so the prediction is a planning aid, not a promise.
 
 ## Serverless variant
