@@ -18,16 +18,16 @@ jobs:
     if: "startsWith(github.event.issue.title, 'build: ')"
     runs-on: ubuntu-latest
     outputs:
-      ok: ${ steps.parse.outputs.ok }
-      machine: ${ steps.parse.outputs.machine }
-      disable: ${ steps.parse.outputs.disable }
-      mesh: ${ steps.parse.outputs.mesh }
-      hash: ${ steps.parse.outputs.hash }
+      ok: ${{ steps.parse.outputs.ok }}
+      machine: ${{ steps.parse.outputs.machine }}
+      disable: ${{ steps.parse.outputs.disable }}
+      mesh: ${{ steps.parse.outputs.mesh }}
+      hash: ${{ steps.parse.outputs.hash }}
     steps:
       - name: Parse and validate
         id: parse
         env:
-          ISSUE_BODY: ${ github.event.issue.body }
+          ISSUE_BODY: ${{ github.event.issue.body }}
         run: |
           python3 - <<'PY'
           import hashlib, json, os, sys
@@ -42,13 +42,12 @@ jobs:
                   machine = str(sel.get("machine", "ender3s1-f103"))
                   off = sel.get("off") or []
                   step = sel.get("mesh")
-                  allowed = [None, "", 3, 5, 7, 9]
                   good = (
                       machine == "ender3s1-f103"
                       and isinstance(off, list) and len(off) <= 120
                       and all(isinstance(x, str) and x.replace("_", "").isalnum()
                               and 2 <= len(x) <= 48 for x in off)
-                      and step in allowed
+                      and step in [None, "", 3, 5, 7, 9]
                   )
                   if good:
                       off = sorted(set(off))
@@ -74,9 +73,9 @@ jobs:
     permissions:
       contents: write
     with:
-      machine: ${ needs.validate.outputs.machine }
-      disable: ${ needs.validate.outputs.disable }
-      mesh: ${ needs.validate.outputs.mesh }
+      machine: ${{ needs.validate.outputs.machine }}
+      disable: ${{ needs.validate.outputs.disable }}
+      mesh: ${{ needs.validate.outputs.mesh }}
 
   answer:
     name: answer in the issue
@@ -88,15 +87,15 @@ jobs:
     steps:
       - name: Comment the link and close the issue
         env:
-          GH_TOKEN: ${ github.token }
-          REPO: ${ github.repository }
-          NUMBER: ${ github.event.issue.number }
-          TAG: ${ needs.build.outputs.tag }
-          HASH: ${ needs.validate.outputs.hash }
-          SEL_MACHINE: ${ needs.validate.outputs.machine }
-          SEL_DISABLE: ${ needs.validate.outputs.disable }
-          SEL_MESH: ${ needs.validate.outputs.mesh }
-          BUILD_RESULT: ${ needs.build.result }
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.issue.number }}
+          TAG: ${{ needs.build.outputs.tag }}
+          HASH: ${{ needs.validate.outputs.hash }}
+          SEL_MACHINE: ${{ needs.validate.outputs.machine }}
+          SEL_DISABLE: ${{ needs.validate.outputs.disable }}
+          SEL_MESH: ${{ needs.validate.outputs.mesh }}
+          BUILD_RESULT: ${{ needs.build.result }}
         run: |
           set -euo pipefail
           if [ "$BUILD_RESULT" != "success" ] || [ -z "$TAG" ]; then
@@ -130,11 +129,11 @@ jobs:
     steps:
       - name: Say what was wrong
         env:
-          GH_TOKEN: ${ github.token }
-          REPO: ${ github.repository }
-          NUMBER: ${ github.event.issue.number }
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.issue.number }}
         run: |
           printf 'This issue does not contain a valid build request. The site opens it with a JSON block in the body; a request names the machine, the feature ids to disable and an optional mesh size of 3, 5, 7 or 9.\n' > /tmp/comment.md
-          gh issue comment "$NUMBER" --repo "$REPO" --body-file /tmp/comment.md
-          gh issue close "$NUMBER" --repo "$REPO" --reason "not planned"
+          gh issue comment "$NUMBER" --repo "$REPO" --body-file /tmp/comment.md || true
+          gh issue close "$NUMBER" --repo "$REPO" --reason "not planned" || true
 
