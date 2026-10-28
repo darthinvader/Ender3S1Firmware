@@ -112,7 +112,8 @@ function renderInspect() {
     (extra ? ".  It has " + extra + (extra === 1 ? " option" : " options") + " the pinned tree does not." : ".");
   const det = $("source-new");
   det.classList.toggle("hidden", !i.new_define_count);
-  det.querySelector("summary").textContent = i.new_define_count + " option(s) this version has that your build does not";
+  det.querySelector("summary").textContent = i.new_define_count + (i.new_define_count === 1 ? " option" : " options") +
+    " this version has that the pinned release does not";
   const list = $("source-new-list");
   list.innerHTML = "";
   for (const d of (i.new_defines || []).slice(0, 40)) {
