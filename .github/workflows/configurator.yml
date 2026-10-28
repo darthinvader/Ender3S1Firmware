@@ -56,7 +56,7 @@ jobs:
             --tree build/Ender3V2S1 \
             --config-dir configs/Ender3S1-F1-v2 \
             --selection @/tmp/selection.json \
-            --out build/configurator/meta.json
+            --out build/configurator/meta.json \
             ${MESH:+--mesh "$MESH"}
 
       - name: Compile
