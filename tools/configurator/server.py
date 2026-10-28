@@ -368,6 +368,14 @@ JOB_ID_RE = __import__("re").compile(r"^[0-9a-f]{12}$")
 STATIC_RE = __import__("re").compile(r"^[A-Za-z0-9._-]+$")
 MAX_BODY = 64 * 1024
 
+# A public deployment must not expose the card writer: anyone on the internet
+# could ask this machine to format a disk. --public turns the hardware endpoints
+# off and limits how often one address may start a build.
+PUBLIC = os.environ.get("CONFIGURATOR_PUBLIC") == "1"
+PUBLIC_BUILDS_PER_HOUR = int(os.environ.get("CONFIGURATOR_BUILDS_PER_HOUR", "6"))
+public_builds = {}
+public_lock = threading.Lock()
+
 
 class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
@@ -470,6 +478,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(sources.inspect(ROOT / entry["path"], catalog))
             except Exception as exc:
                 return self._json({"error": str(exc)[:300]}, 500)
+        if PUBLIC and path in ("/api/devices", "/api/write", "/api/versions/fetch"):
+            return self._json({"error": "this deployment builds firmware only; hardware access is off"}, 403)
         if path == "/api/devices":
             try:
                 devices = writer.list_devices()
@@ -670,10 +680,23 @@ class Handler(BaseHTTPRequestHandler):
 
     def _post(self):
         path = urlparse(self.path).path
+        if PUBLIC and path in ("/api/write", "/api/versions/fetch"):
+            return self._json({"error": "this deployment builds firmware only; hardware access is off"}, 403)
         if path == "/api/versions/fetch":
             return self._fetch_version()
         if path == "/api/write":
             return self._write()
+        if PUBLIC:
+            ip = (self.headers.get("CF-Connecting-IP") or self.headers.get("X-Forwarded-For") or
+                  self.client_address[0]).split(",")[0].strip()
+            hour = int(time.time() // 3600)
+            with public_lock:
+                seen = [h for h, _ in public_builds.get(ip, []) if h == hour]
+                if len(seen) >= PUBLIC_BUILDS_PER_HOUR:
+                    return self._json({"error": "this address has started %d builds this hour; try again later"
+                                       % PUBLIC_BUILDS_PER_HOUR}, 429)
+                public_builds.setdefault(ip, []).append((hour, time.time()))
+                public_builds[ip] = [(h, t) for h, t in public_builds[ip] if h == hour]
         if path != "/api/build":
             return self._json({"error": "not found"}, 404)
         length = int(self.headers.get("Content-Length") or 0)
@@ -744,6 +767,9 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
+    if "--public" in sys.argv:
+        global PUBLIC
+        PUBLIC = True
     host = os.environ.get("CONFIGURATOR_HOST", "127.0.0.1")
     port = int(os.environ.get("CONFIGURATOR_PORT", "8787"))
     JOBS.mkdir(parents=True, exist_ok=True)
@@ -753,6 +779,8 @@ def main():
     print("configurator on http://%s:%d" % (host, port))
     print("  catalog : %s (%d features)" % (CATALOG, len(json.loads(CATALOG.read_text())["features"])))
     print("  tree    : %s" % ("ready" if ready["toolchain_ready"] else "NOT READY - " + ready["hint"]))
+    if PUBLIC:
+        print("  public  : hardware endpoints off, %d builds per address per hour" % PUBLIC_BUILDS_PER_HOUR)
     try:
         srv.serve_forever()
     except KeyboardInterrupt:

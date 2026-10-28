@@ -4,38 +4,53 @@ The frontend is easy - it is a static page. The backend is the hard part: it
 **compiles C code**, so it needs a real machine with a disk, not a serverless
 function.
 
-## Deployed: no server, no account, nothing to bill
+## Where the backend can live: checked, not guessed
 
-The public build page is live at
-**https://darthinvader.github.io/Ender3S1Firmware/cloud/** and works like this:
+The backend compiles with PlatformIO, so it needs a container-sized host: about
+**5 GB of disk and 1 GB of RAM**, on x86_64 **or arm64** (PlatformIO ships
+both). Serverless platforms cannot run it at all.
 
-1. The page (GitHub Pages, static) loads the catalogue and computes a
-   **deterministic build id** from the selection: the first 12 hex digits of
-   sha256 over `machine=<m>;off=<sorted ids>;mesh=<n>`.
-2. It asks the public GitHub API whether a release with that tag exists. If it
-   does, the button is a direct download of `firmware.bin` - no account needed.
-3. If it does not, the button opens a **prefilled GitHub issue**. The workflow
-   `build-request.yml` validates the JSON body against an allowlist, calls the
-   reusable `configurator.yml` to build it, publishes the release, comments the
-   download link back on the issue and closes it.
+| Host | Fits? | Cost | Verified detail |
+|---|---|---|---|
+| **Oracle Cloud Always Free**, `VM.Standard.A1.Flex` (Arm) | **yes** | free forever | Oracle's docs: Always Free tenancies get the equivalent of **2 OCPUs and 12 GB RAM**, plus **200 GB** of block storage; minimum boot volume 47 GB |
+| Google Cloud free `e2-micro` | marginal | free | 1 GB RAM against a 462 MB build peak; one build at a time |
+| Hugging Face Spaces (Docker) | no longer | - | Spaces docs: "creating a Space that runs on compute (Gradio or Docker) **requires a paid plan**"; Static Spaces are the free ones |
+| Cloudflare Workers | not for the compiler | free plan | Workers cannot run PlatformIO; only useful as a small dispatcher for GitHub Actions |
+| Render / Railway / Koyeb / Fly.io free tiers | no | - | 512 MB RAM, ephemeral disk, or trial credit |
 
-Why this cannot become a bill: Pages and Actions are free for public
-repositories, releases are free, and **no payment method is involved anywhere
-in the path**. A flood produces queued jobs and closed issues, then GitHub's own
-rate limits, not an invoice.
+### Oracle recipe (one paste)
 
-Verified end to end on 2026-10-28: issue #3 asked for `linear_advance` off with a
-5x5 mesh; the workflow built it, published **build-b6325c78b948** (firmware.bin
-224 KiB), commented the link and closed the issue. The same selection now shows
-a Download button on the page, while an unbuilt selection shows Request - the
-two states are mutually exclusive, including when inputs change quickly.
+[deploy/oracle/cloud-init.yaml](../deploy/oracle/cloud-init.yaml) is a cloud-init
+script: on Ubuntu 24.04 it installs Docker, clones this repository and runs
+[deploy/docker-compose.yml](../deploy/docker-compose.yml), which starts the
+service in **public mode** on port 8080.
 
-### The optional Worker (a one-click button instead of an issue)
+1. Create an **Always Free** `VM.Standard.A1.Flex` instance: 2 OCPUs, 12 GB, Ubuntu 24.04,
+   47 GB boot volume, and paste the cloud-init script under
+   *Show advanced options → Management*.
+2. Open port 8080 in the subnet's security list (and `ufw`, which the script already does).
+3. Wait for the image build (a few minutes), then browse to
+   `http://<instance-ip>:8080` - that is the configurator, same API as locally.
+4. Point the Pages build page at it: put the address into
+   [docs/cloud/backend.json](../docs/cloud/backend.json) as `{"url": "http://<instance-ip>:8080"}`.
 
-[deploy/cloudflare/](../deploy/cloudflare) is a free-plan Cloudflare Worker that
-dispatches the workflow directly, with per-IP and per-day caps and
-deduplication by selection hash. It needs a Cloudflare account and a
-fine-grained token, so it is optional; the issue path above needs neither.
+### Public mode
+
+`--public` (or `CONFIGURATOR_PUBLIC=1`) is required on any reachable host:
+
+- `/api/write`, `/api/devices` and `/api/versions/fetch` answer **403** - a visitor can build,
+  not format a disk;
+- builds are limited per address (`CONFIGURATOR_BUILDS_PER_HOUR`, default 6) and answer 429 beyond that;
+- one build runs at a time in the existing queue.
+
+Verified locally: catalog 200, devices 403, write 403, versions/fetch 403,
+third build from one address 429.
+
+### Do not publish a tunnel from a home machine
+
+A quick tunnel (`trycloudflare.com`) does not reveal the home IP - the connection is
+outbound - but it does publish a compiler and, without public mode, the card
+writer to anyone with the URL. Use a host you can afford to expose instead.
 
 ## What the backend actually needs (measured on this machine)
 

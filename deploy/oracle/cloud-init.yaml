@@ -1,0 +1,17 @@
+#cloud-config
+# Oracle Cloud Always Free, VM.Standard.A1.Flex (Arm), Ubuntu 24.04.
+# Paste this into "Show advanced options -> Management -> Cloud-init script"
+# when creating the instance. It installs Docker, clones the repository and
+# starts the configurator in public mode on port 8080.
+package_update: true
+packages:
+  - git
+  - ca-certificates
+  - curl
+runcmd:
+  - curl -fsSL https://get.docker.com | sh
+  - usermod -aG docker ubuntu
+  - git clone --depth 1 https://github.com/darthinvader/Ender3S1Firmware.git /opt/firmware
+  - cd /opt/firmware && docker compose -f deploy/docker-compose.yml up -d --build
+  - ufw allow 8080/tcp || true
+

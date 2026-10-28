@@ -6,12 +6,17 @@ services:
     image: ender3s1-configurator:latest
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8787:8787"
+      - "8080:8787"
     volumes:
       - build-tree:/app/build
     environment:
+      CONFIGURATOR_HOST: "0.0.0.0"
       CONFIGURATOR_PORT: "8787"
+      # a public deployment builds only: card writing and version fetching are off
+      CONFIGURATOR_PUBLIC: "1"
+      CONFIGURATOR_BUILDS_PER_HOUR: "6"
       SKIP_BOOTSTRAP: "0"
 
 volumes:
   build-tree:
+
