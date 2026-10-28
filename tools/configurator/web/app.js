@@ -117,18 +117,35 @@ async function loadVersions(refresh) {
   renderSources();
 }
 
+function shortDate(iso) {
+  if (!iso) return "";
+  const d = new Date(iso + "T00:00:00");
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+/** What a version is, in the order a person reads: what it is, then when, then state. */
+function sourceLabel(v) {
+  const bits = [];
+  if (v.kind === "pinned") bits.push("Pinned");
+  else if (v.kind === "branch") bits.push("Branch " + (v.ref || ""));
+  else bits.push("Release " + (v.ref || ""));
+  if (v.date) bits.push(shortDate(v.date));
+  if (v.kind === "pinned") bits.push("costs measured here");
+  if (v.kind !== "pinned" && !v.fetched) bits.push("not downloaded");
+  return bits.join("  -  ");
+}
+
 function renderSources() {
   const sel = $("source");
   const keep = app.sourceId;
   sel.innerHTML = "";
   for (const v of app.versions) {
     const o = document.createElement("option");
-    const bits = [v.label];
-    if (v.sha) bits.push(v.sha);
-    if (v.date) bits.push(v.date);
-    if (v.kind !== "pinned" && !v.fetched) bits.push("not downloaded");
     o.value = v.id;
-    o.textContent = bits.join("  -  ");
+    o.textContent = sourceLabel(v);
+    o.title = (v.kind === "pinned" ? "the commit this repository was built from" : (v.sha || "")) +
+      (v.sha ? "  -  commit " + v.sha : "");
     sel.appendChild(o);
   }
   if (![...sel.options].some((o) => o.value === keep)) app.sourceId = "pinned";
@@ -155,9 +172,9 @@ function renderSourceNote() {
     return;
   }
   const bits = [];
-  bits.push(v.kind === "tag" ? "release " + v.ref : "branch " + v.ref);
-  if (v.date) bits.push("published " + v.date);
-  bits.push("commit " + v.sha);
+  bits.push(v.kind === "tag" ? "release " + v.ref : (v.kind === "branch" ? "branch " + v.ref : "the pinned commit"));
+  if (v.date) bits.push(shortDate(v.date));
+  if (v.sha) bits.push("commit " + v.sha);
   bits.push(v.fetched ? "downloaded" : "not downloaded yet - the size is only known after compiling");
   note.textContent = bits.join("  -  ");
   if (v.fetched && app.sourceInspect) renderInspect();
@@ -333,8 +350,9 @@ function renderScreen() {
     if (!app.showUnavailable && !e.bundled) continue;
     const o = document.createElement('option');
     o.value = e.id;
-    o.textContent = e.label + '  (' + Math.round(e.bytes / 1024) + ' KiB' +
-      (e.verified_on_this_panel ? ', verified here' : ', not verified here') + ')';
+    o.textContent = e.label + '  -  ' +
+      (e.verified_on_this_panel ? 'verified on this panel' : 'never flashed on this panel') +
+      '  -  ' + Math.round(e.bytes / 1024) + ' KiB';
     o.disabled = !e.bundled;
     os.appendChild(o);
   }
@@ -342,8 +360,9 @@ function renderScreen() {
     if (!app.showUnavailable && !(e.bundled && e.pairs_with === 'custom')) continue;
     const o = document.createElement('option');
     o.value = e.id;
-    o.textContent = e.label + '  (' + Math.round(e.bytes / 1024) + ' KiB' +
-      (e.pairs_with === 'custom' ? ', pairs with this build' : ', ' + e.pairs_with + ' firmware only') + ')';
+    o.textContent = e.label + '  -  ' +
+      (e.pairs_with === 'custom' ? 'pairs with custom firmware' : e.pairs_with + ' firmware only') +
+      (e.bytes ? '  -  ' + Math.round(e.bytes / 1024) + ' KiB' : '  -  documented, not bundled');
     o.disabled = !(e.bundled && e.pairs_with === 'custom');
     assets.appendChild(o);
   }
