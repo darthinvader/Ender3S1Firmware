@@ -57,7 +57,7 @@ jobs:
             --config-dir configs/Ender3S1-F1-v2 \
             --selection @/tmp/selection.json \
             --out build/configurator/meta.json
-            ${{MESH:+--mesh "$MESH"}
+            ${MESH:+--mesh "$MESH"}
 
       - name: Compile
         run: ./scripts/build.sh | tee build/configurator/build.log
@@ -89,10 +89,10 @@ jobs:
           SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          sel="machine=${{MACHINE};off=${{DISABLE};mesh=${{MESH}"
+          sel="machine=${MACHINE};off=${DISABLE};mesh=${MESH}"
           HASH=$(printf '%s' "$sel" | sha256sum | cut -c1-12)
           TAG="build-$HASH"
-          URL="https://github.com/${{GITHUB_REPOSITORY}/releases/download/${{TAG}/firmware.bin"
+          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/firmware.bin"
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "this selection is already published as $TAG" | tee -a "$GITHUB_STEP_SUMMARY"
           else
