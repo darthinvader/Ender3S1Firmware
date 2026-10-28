@@ -141,14 +141,7 @@
       <p class="hint" id="countline"></p>
       <button id="build" class="primary">Build firmware</button>
       <p class="hint" id="build-note"></p>
-      <details id="connect">
-        <summary class="hint">Connect GitHub (optional, one click instead of a request)</summary>
-        <label for="token">Fine-grained token: Actions read and write, this repository only</label>
-        <input id="token" type="password" placeholder="github_pat_..." autocomplete="off">
-        <button id="save-token" class="ghost small-btn">save in this browser</button>
-        <p class="hint">Stored only in localStorage on this device; it lets the button dispatch the workflow
-          directly. Without it the button opens a prefilled issue, and the download never needs an account.</p>
-      </details>
+      <p class="hint" id="builder-state">looking for the public builder ...</p>
     </section>
 
     <section class="card" id="screen-card">
@@ -206,7 +199,7 @@ const RAW = "https://raw.githubusercontent.com/" + REPO + "/main/";
 const CATALOG_URL = RAW + "tools/configurator/features.json";
 const FENCE = String.fromCharCode(96).repeat(3);
 const app = { catalog: null, on: new Set(), off: new Set(), mesh: 7, filter: "", collapsed: {},
-              poll: 0, tag: null, job: null, gen: 0 };
+              poll: 0, tag: null, job: null, gen: 0, backend: null };
 
 const $ = (id) => document.getElementById(id);
 const usable = (f) => f.buildable !== false;
@@ -536,56 +529,88 @@ async function dispatchWithToken(token, sel) {
 }
 
 async function startBuild() {
-  const { sel, tag } = await currentTag();
+  if (!app.backend) return;
   if ($("build").disabled) return;
-  const token = localStorage.getItem("e3s1-token");
+  const sel = selection();
   $("status").hidden = false;
+  $("result").hidden = true;
   $("phase").textContent = "queued";
   $("phase").className = "mono warn";
-  $("jobid").textContent = tag;
+  $("jobid").textContent = "";
   $("log").hidden = true;
-  $("run-link").hidden = true;
-
-  if (token) {
-    try {
-      await dispatchWithToken(token, sel);
-      $("phase").textContent = "queued on GitHub";
-      $("build-note").textContent = "The workflow is running; this panel will show the files when it publishes them.";
-      pollFor(tag);
-      return;
-    } catch (error) {
-      $("build-note").textContent = "Direct dispatch failed (" + error.message + "), falling back to a request.";
-    }
+  $("build").disabled = true;
+  try {
+    const res = await fetch(app.backend + "/api/build", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ machine: sel.machine, on: sel.on, off: sel.off, mesh: sel.mesh }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
+    $("jobid").textContent = data.id;
+    pollJob(data.id);
+  } catch (error) {
+    $("phase").textContent = "refused";
+    $("phase").className = "mono bad";
+    $("build-note").textContent = "The builder refused the job: " + error.message;
+    $("build").disabled = false;
   }
-
-  const payload = JSON.stringify({ machine: sel.machine, on: sel.on, off: sel.off, mesh: sel.mesh }, null, 2);
-  const body = ["Requesting a firmware build from the factory page.", "", FENCE + "json", payload, FENCE,
-    "", "The workflow builds this selection and replies with the download link."].join("\n");
-  const url = "https://github.com/" + REPO + "/issues/new?title=" +
-    encodeURIComponent("build: " + tag.slice(6)) + "&body=" + encodeURIComponent(body);
-  window.open(url, "_blank", "noopener");
-  $("phase").textContent = "waiting for the request";
-  $("build-note").textContent = "Finish the GitHub request in the new tab; this panel updates by itself when the image is published.";
-  pollFor(tag);
 }
 
-function pollFor(tag) {
+function pollJob(id) {
   clearInterval(app.poll);
-  let tries = 0;
   app.poll = setInterval(async () => {
-    tries += 1;
-    const meta = await fetchRelease(tag);
-    if (meta) {
+    try {
+      const res = await fetch(app.backend + "/api/build/" + id);
+      const job = await res.json();
+      if (!res.ok) throw new Error(job.error || ("HTTP " + res.status));
+      $("phase").textContent = job.phase || job.status;
+      $("phase").className = "mono " + (job.status === "failed" ? "bad" : job.status === "succeeded" ? "ok" : "warn");
+      if (job.log && job.log.length) {
+        $("log").hidden = false;
+        $("log").textContent = job.log.join("");
+        $("log").scrollTop = $("log").scrollHeight;
+      }
+      if (job.status === "succeeded") {
+        clearInterval(app.poll);
+        $("build").disabled = false;
+        showJobResult(id, job);
+      } else if (job.status === "failed") {
+        clearInterval(app.poll);
+        $("build").disabled = false;
+        $("build-note").textContent = "Build failed: " + (job.error || "see the log above");
+      }
+    } catch (error) {
       clearInterval(app.poll);
-      $("phase").textContent = "published";
-      $("phase").className = "mono ok";
-      await showResult(meta, tag);
-      $("build-note").textContent = "Built and published " + meta.published + ".";
-      return;
+      $("build").disabled = false;
+      $("phase").textContent = "lost contact";
+      $("phase").className = "mono bad";
     }
-    $("phase").textContent = "building (" + Math.round(tries * 8) + " s)";
-    if (tries > 75) { clearInterval(app.poll); $("phase").textContent = "still not published"; $("phase").className = "mono bad"; }
-  }, 8000);
+  }, 1200);
+}
+
+function showJobResult(id, job) {
+  const base = app.backend + "/api/build/" + id;
+  const result = job.result || {};
+  const predicted = job.predicted || {};
+  $("result").hidden = false;
+  $("r-size").textContent = result.file_size ? human(result.file_size) : "-";
+  $("r-pred").textContent = predicted.flash ? human(predicted.flash) : "-";
+  $("r-free").textContent = predicted.flash_free != null ? human(predicted.flash_free) : "-";
+  $("r-ram").textContent = result.ram_used ? human(result.ram_used) : (predicted.ram ? human(predicted.ram) : "-");
+  const size = job.mesh || app.mesh;
+  $("r-mesh").textContent = size + " x " + size;
+  const off = job.off || [], on = job.on || [];
+  $("r-sel").textContent = (off.length ? "off: " + off.join(", ") : "") +
+    (on.length ? (off.length ? " · " : "") + "on: " + on.join(", ") : "") || "nothing changed from the shipped build";
+  $("r-sha").textContent = result.sha256 ? result.sha256.slice(0, 16) + "..." : "-";
+  $("download").href = base + "/firmware.bin"; $("download").hidden = false;
+  $("manifest").href = base + "/manifest.json"; $("manifest").hidden = false;
+  $("bundle").href = base + "/bundle.zip"; $("bundle").hidden = false;
+  $("loglink").href = "data:text/plain;charset=utf-8," + encodeURIComponent((job.log || []).join(""));
+  $("loglink").hidden = false;
+  $("checksums").hidden = true;
+  $("build-note").textContent = "Built in this browser session from the pinned sources.";
 }
 
 function applyPreset(name) {
@@ -619,7 +644,34 @@ $("save-token").onclick = () => {
   $("token").value = "";
   $("build-note").textContent = "Token saved in this browser; Build now dispatches directly.";
 };
-loadCatalog();
+async function findBackend() {
+  try {
+    const res = await fetch("backend.json?t=" + Date.now(), { cache: "no-store" });
+    if (!res.ok) return null;
+    const config = await res.json();
+    if (!config.url) return null;
+    const probe = await fetch(config.url + "/api/catalog", { signal: AbortSignal.timeout(6000) });
+    return probe.ok ? config.url : null;
+  } catch (error) { return null; }
+}
+
+async function boot() {
+  app.backend = await findBackend();
+  const state = $("builder-state");
+  if (app.backend) {
+    state.className = "hint ok";
+    state.textContent = "Public builder online: Build compiles on this machine and hands back the files.";
+  } else {
+    state.className = "hint warn";
+    state.textContent = "Public builder offline right now. Downloads of already published images still work; " +
+      "a new build needs the machine that serves it, or a GitHub request from the maintenance page.";
+    $("build").disabled = true;
+    $("build-note").textContent = "The builder is offline; pick a published image below or come back later.";
+  }
+  await loadCatalog();
+}
+
+boot();
 </script>
 </body>
 </html>
