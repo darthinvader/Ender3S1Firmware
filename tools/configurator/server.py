@@ -33,7 +33,7 @@ import uuid
 import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from tools.configurator import writer  # noqa: E402
@@ -383,10 +383,16 @@ class Handler(BaseHTTPRequestHandler):
         catalog = json.loads(CATALOG.read_text())
         manifest = json.loads((jobdir / "manifest.json").read_text()) if (jobdir / "manifest.json").exists() else {}
         screen = catalog.get("screen", {})
-        os_id = manifest.get("screen", {}).get("os")
-        assets_id = manifest.get("screen", {}).get("assets")
+        # the screen package is independent of the compiled image, so the download may name its own
+        query = parse_qs(urlparse(self.path).query)
+        os_id = (query.get("os") or [manifest.get("screen", {}).get("os")])[0]
+        assets_id = (query.get("assets") or [manifest.get("screen", {}).get("assets")])[0]
         os_entry = next((x for x in screen.get("os", []) if x["id"] == os_id), None)
         assets_entry = next((x for x in screen.get("assets", []) if x["id"] == assets_id), None)
+        if (os_id and os_entry is None) or (assets_id and assets_entry is None):
+            return self._json({"error": "unknown screen package %r / %r" % (os_id, assets_id)}, 400)
+        if assets_entry and assets_entry.get("pairs_with") != "custom":
+            return self._json({"error": "%s pairs with stock firmware, not this build" % assets_entry["label"]}, 400)
 
         instructions = [
             "Ender 3 S1 - flash both processors",

@@ -38,7 +38,8 @@ function toast(message, kind) {
 function signature() {
   const on = [];
   for (const f of app.catalog.features) if (app.state[f.id]) on.push(f.id);
-  return [machine(), on.join(','), $('screen-os').value, $('screen-assets').value].join('|');
+  // the screen package is copied onto the card, not compiled: it is deliberately not part of this
+  return [machine(), on.join(',')].join('|');
 }
 function buildFresh() { return !!app.build && app.build.signature === signature(); }
 
@@ -284,6 +285,9 @@ function renderBudget() {
     ? ('Over budget: ' + fmt(p.flash) + ' B against ' + fmt(region) + ' B. The link will fail unless the board has more flash.')
     : '';
 
+  const busy = app.busy;
+  $('screen-os').disabled = busy;
+  $('screen-assets').disabled = busy;
   updateWriteState();
 }
 
@@ -443,6 +447,13 @@ function poll(id) {
   }).catch(() => { app.pollTimer = setTimeout(() => poll(id), 2500); });
 }
 
+function updateBundleLink(id) {
+  const base = '/api/build/' + (id || (app.build && app.build.id) || '') + '/bundle.zip';
+  if (!id && !(app.build && app.build.id)) return;
+  $('bundle').href = base + '?os=' + encodeURIComponent($('screen-os').value) +
+    '&assets=' + encodeURIComponent($('screen-assets').value);
+}
+
 function showResult(j) {
   const r = j.result;
   app.build = { id: j.id, signature: app.pending ? app.pending.signature : signature(),
@@ -480,7 +491,7 @@ function showResult(j) {
   $('status').classList.add('hidden');
   $('download').href = '/api/build/' + j.id + '/firmware.bin';
   $('manifest').href = '/api/build/' + j.id + '/manifest.json';
-  $('bundle').href = '/api/build/' + j.id + '/bundle.zip';
+  updateBundleLink(j.id);
   $('result').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   updateWriteState();
 }
@@ -492,8 +503,8 @@ async function doWrite() {
   if ($('part-board').checked) parts.push('board');
   if ($('part-screen').checked) parts.push('screen');
   const sc = app.catalog.screen;
-  const osId = parts.indexOf('board') !== -1 && app.build ? app.build.screen_os : $('screen-os').value;
-  const packId = parts.indexOf('board') !== -1 && app.build ? app.build.screen_assets : $('screen-assets').value;
+  const osId = $('screen-os').value;
+  const packId = $('screen-assets').value;
   const osEntry = sc.os.find((x) => x.id === osId);
   const packEntry = sc.assets.find((x) => x.id === packId);
 
@@ -596,8 +607,8 @@ async function boot() {
   renderBudget();
 
   $('machine').onchange = () => { renderBudget(); };
-  $('screen-os').onchange = () => { renderScreenNote(); markDirty(); };
-  $('screen-assets').onchange = () => { renderScreenNote(); markDirty(); };
+  $('screen-os').onchange = () => { renderScreenNote(); updateBundleLink(); };
+  $('screen-assets').onchange = () => { renderScreenNote(); updateBundleLink(); };
   $('build').onclick = startBuild;
   $('write').onclick = doWrite;
   $('refresh-devices').onclick = loadDevices;
