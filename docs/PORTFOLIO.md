@@ -25,6 +25,8 @@ that work, and the recovery kit is here too.
 
 ## CV bullets (paste-ready)
 
+Also available as files you can drop into a CV: [one-page PDF](Ender3S1Firmware-CV-entry.pdf) · [Word version](Ender3S1Firmware-CV-entry.docx) · [plain text](CV-ENTRY.md).
+
 - Built a **firmware build service** (Python stdlib HTTP service + vanilla JS, no
   framework) that assembles custom Marlin images from **any upstream mriscoc
   checkpoint** - release tags and branches, fetched on demand - applying a

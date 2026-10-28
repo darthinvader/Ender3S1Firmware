@@ -304,6 +304,7 @@ account action this machine cannot perform on its own. It never force-pushes.
 | [CHANGELOG.md](CHANGELOG.md) | Dated history from stock firmware to the current build |
 | [tools/configurator/README.md](tools/configurator/README.md) | The configurator: feature catalogue, measured prediction accuracy, building any mriscoc release or branch |
 | [docs/index.html](docs/index.html) | The GitHub Pages landing page (live at https://darthinvader.github.io/Ender3S1Firmware/) |
+| [docs/CV-ENTRY.md](docs/CV-ENTRY.md) | The project as a CV entry - a paste-ready block, a profile paragraph and a one-liner, also as PDF and DOCX |
 | [docs/PORTFOLIO.md](docs/PORTFOLIO.md) | The project in CV form: pitch, bullets, skills with evidence, honest scope |
 | [docs/UI-NOTES.md](docs/UI-NOTES.md) | Why the page looks and behaves like this - every rule, its published source, and the gaps |
 
