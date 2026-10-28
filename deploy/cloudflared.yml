@@ -1,0 +1,7 @@
+tunnel: ender3s1
+credentials-file: /home/USER/.cloudflared/REPLACED.json
+
+ingress:
+  - hostname: firmware.example.com
+    service: http://127.0.0.1:8787
+  - service: http_status:404

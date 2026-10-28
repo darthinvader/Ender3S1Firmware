@@ -163,6 +163,9 @@ Everything on the page is served from the same process - there is no separate fr
 
 ## Configurator (optional)
 
+It runs locally in one command; if you want it on a server, [docs/HOSTING.md](docs/HOSTING.md) has the measured requirements and free-forever options ([deploy/](deploy) has the Docker image, compose file, systemd unit and tunnel config).
+
+
 ![The build service, step by step: choose a checkpoint, measure a feature, build, verify](docs/img/configurator-demo.gif)
 
 *Eight numbered frames, each one ringed on the control it talks about: pick a checkpoint, filter a feature, see its measured cost, turn it off, watch the budget, build, read the verified result, and write the card.*
@@ -306,6 +309,7 @@ account action this machine cannot perform on its own. It never force-pushes.
 | [docs/index.html](docs/index.html) | The GitHub Pages landing page (live at https://darthinvader.github.io/Ender3S1Firmware/) |
 | [docs/CV-ENTRY.md](docs/CV-ENTRY.md) | The project as a CV entry - a paste-ready block, a profile paragraph and a one-liner, also as PDF and DOCX |
 | [docs/PORTFOLIO.md](docs/PORTFOLIO.md) | The project in CV form: pitch, bullets, skills with evidence, honest scope |
+| [docs/HOSTING.md](docs/HOSTING.md) | Where the service can live for free - measured requirements, the honest comparison, and Docker/Cloudflare/systemd recipes |
 | [docs/UI-NOTES.md](docs/UI-NOTES.md) | Why the page looks and behaves like this - every rule, its published source, and the gaps |
 
 ## Compatibility - read before flashing

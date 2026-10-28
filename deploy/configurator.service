@@ -1,0 +1,17 @@
+[Unit]
+Description=Ender 3 S1 firmware configurator
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=%i
+WorkingDirectory=%h/Projects/Ender3S1Firmware
+Environment=CONFIGURATOR_HOST=127.0.0.1
+Environment=CONFIGURATOR_PORT=8787
+ExecStart=/usr/bin/python3 tools/configurator/server.py
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target
