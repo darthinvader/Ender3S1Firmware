@@ -24,6 +24,7 @@ jobs:
       enable: ${{ steps.parse.outputs.enable }}
       mesh: ${{ steps.parse.outputs.mesh }}
       hash: ${{ steps.parse.outputs.hash }}
+      unknown: ${{ steps.parse.outputs.unknown }}
     steps:
       - name: Parse and validate
         id: parse
@@ -34,7 +35,17 @@ jobs:
           import hashlib, json, os, sys
           body = os.environ.get("ISSUE_BODY") or ""
           ok = "false"
-          machine = disable = enable = mesh = hash12 = ""
+          machine = disable = enable = mesh = hash12 = unknown = ""
+          import urllib.request
+          try:
+              catalog = json.load(urllib.request.urlopen(
+                  "https://raw.githubusercontent.com/" + os.environ.get("REPO", "") +
+                  "/main/tools/configurator/features.json", timeout=25))
+              known = {f["id"] for f in catalog.get("features", []) if f.get("buildable", True)}
+          except Exception as exc:
+              print("catalogue unavailable:", exc, file=sys.stderr)
+              known = None
+          unknown = ""
           start = body.find("{", body.find("json"))
           end = body.rfind("}")
           if start != -1 and end > start:
@@ -64,12 +75,20 @@ jobs:
                       if enable:
                           line += ";on=" + enable
                       hash12 = hashlib.sha256(line.encode()).hexdigest()[:12]
-                      ok = "true"
+                      if known is not None:
+                          bad = [x for x in (off + on) if x not in known]
+                          if bad:
+                              unknown = ",".join(bad[:6])
+                          else:
+                              ok = "true"
+                      else:
+                          ok = "true"
               except Exception as exc:
                   print("parse failed:", exc, file=sys.stderr)
           with open(os.environ["GITHUB_OUTPUT"], "a") as out:
               for key, value in (("ok", ok), ("machine", machine), ("disable", disable),
-                                 ("enable", enable), ("mesh", mesh), ("hash", hash12)):
+                                 ("enable", enable), ("mesh", mesh), ("hash", hash12),
+                                 ("unknown", unknown)):
                   out.write(key + "=" + value + "\n")
           print("accepted" if ok == "true" else "rejected", machine, disable, mesh, hash12)
           PY
@@ -100,6 +119,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           NUMBER: ${{ github.event.issue.number }}
+          UNKNOWN: ${{ needs.validate.outputs.unknown }}
           TAG: ${{ needs.build.outputs.tag }}
           HASH: ${{ needs.validate.outputs.hash }}
           SEL_MACHINE: ${{ needs.validate.outputs.machine }}
@@ -107,11 +127,12 @@ jobs:
           SEL_ENABLE: ${{ needs.validate.outputs.enable }}
           SEL_MESH: ${{ needs.validate.outputs.mesh }}
           BUILD_RESULT: ${{ needs.build.result }}
+          EXISTED: ${{ needs.build.outputs.existed }}
           SERVER: ${{ github.server_url }}
           RUN_ID: ${{ github.run_id }}
         run: |
           set -euo pipefail
-          if [ "$BUILD_RESULT" != "success" ] || [ -z "$TAG" ]; then
+          if [ -z "$TAG" ] || { [ "$BUILD_RESULT" != "success" ] && [ "$EXISTED" != "true" ]; }; then
             printf 'The build for %s failed.\n\n' "$HASH" > /tmp/comment.md
             printf 'The run is here: %s/%s/actions/runs/%s\n\n' "$SERVER" "$REPO" "$RUN_ID" >> /tmp/comment.md
             printf 'The usual cause is a selection that does not fit the 233,472 B region: the budget check stops before the compiler, and the log names the overflow in bytes. Switch a feature off and ask again.\n' >> /tmp/comment.md
@@ -124,7 +145,11 @@ jobs:
           ENABLE_TEXT="$SEL_ENABLE"; [ -z "$ENABLE_TEXT" ] && ENABLE_TEXT="none"
           MESH_TEXT="$SEL_MESH"; [ -z "$MESH_TEXT" ] && MESH_TEXT="catalogue default"
           {
-            printf 'Built and published as a release: %s\n\n' "$TAG"
+            if [ "$EXISTED" = "true" ]; then
+              printf 'This exact selection was already built and published: %s\n\n' "$TAG"
+            else
+              printf 'Built and published as a release: %s\n\n' "$TAG"
+            fi
             printf '**download:** %s\n\n' "$URL"
             printf '| selection | value |\n|---|---|\n'
             printf '| machine | %s |\n' "$SEL_MACHINE"
@@ -150,7 +175,12 @@ jobs:
           REPO: ${{ github.repository }}
           NUMBER: ${{ github.event.issue.number }}
         run: |
-          printf 'This issue does not contain a valid build request. The site opens it with a JSON block in the body; a request names the machine, the feature ids to disable and an optional mesh size of 3, 5, 7 or 9.\n' > /tmp/comment.md
+          if [ -n "$UNKNOWN" ]; then
+            printf 'This request names feature ids that are not in the catalogue: %s\n\n' "$UNKNOWN" > /tmp/comment.md
+            printf 'Open the build page again and pick from the list; the ids there are the ones the catalogue accepts.\n' >> /tmp/comment.md
+          else
+            printf 'This issue does not contain a valid build request. The site opens it with a JSON block in the body; a request names the machine, the feature ids to disable and an optional mesh size of 3, 5, 7 or 9.\n' > /tmp/comment.md
+          fi
           gh issue comment "$NUMBER" --repo "$REPO" --body-file /tmp/comment.md || true
           gh issue close "$NUMBER" --repo "$REPO" --reason "not planned" || true
 

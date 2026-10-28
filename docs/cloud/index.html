@@ -117,15 +117,16 @@
   <aside class="side">
     <section class="card">
       <h2>Mainboard firmware</h2>
-      <label for="version">Upstream checkpoint</label>
-      <select id="version"><option>the pinned build (what the workflow uses)</option></select>
+      <p class="hint" style="margin-top:0">This builder compiles the repository's <b>pinned upstream checkpoint</b>.
+        Choosing another checkpoint is what the local app does, because it fetches the tree on demand.</p>
       <p class="hint" id="version-note"></p>
+      <a class="ghost small-btn" href="https://github.com/darthinvader/Ender3S1Firmware/blob/main/README.md#pinned-upstream">the pinned commit</a>
     </section>
 
     <section class="card">
       <h2>Build</h2>
       <div class="presets">
-        <button class="preset active" data-preset="now">What I run now</button>
+        <button class="preset active" data-preset="now">As shipped</button>
         <button class="preset" data-preset="min">Minimum</button>
         <button class="preset" data-preset="fit">Add what fits</button>
       </div>
@@ -186,6 +187,7 @@
         <a class="ghost" id="manifest" href="#" hidden>Manifest</a>
         <a class="ghost" id="bundle" href="#" hidden>Bundle (.zip)</a>
         <a class="ghost" id="loglink" href="#" hidden>Build log</a>
+        <a class="ghost" id="checksums" href="#" hidden>Checksums</a>
       </div>
     </section>
   </aside>
@@ -204,14 +206,17 @@ const RAW = "https://raw.githubusercontent.com/" + REPO + "/main/";
 const CATALOG_URL = RAW + "tools/configurator/features.json";
 const FENCE = String.fromCharCode(96).repeat(3);
 const app = { catalog: null, on: new Set(), off: new Set(), mesh: 7, filter: "", collapsed: {},
-              poll: 0, tag: null, job: null };
+              poll: 0, tag: null, job: null, gen: 0 };
 
 const $ = (id) => document.getElementById(id);
 const usable = (f) => f.buildable !== false;
 const priced = (f) => f.cost_source === "measured" && typeof f.flash === "number" && f.flash !== 0;
 const fmt = (n) => Number(n || 0).toLocaleString("en-US");
 const mb = (bytes) => (Number(bytes || 0) / (1024 * 1024)).toFixed(2) + " MiB";
-const human = (bytes) => fmt(bytes) + " B · " + mb(bytes);
+const human = (bytes) => {
+  const n = Number(bytes || 0);
+  return Math.abs(n) >= 1048576 ? fmt(n) + " B · " + mb(n) : fmt(n) + " B";
+};
 
 function isOn(f) {
   if (app.on.has(f.id)) return true;
@@ -307,12 +312,13 @@ async function loadCatalog() {
     fillMachines();
     fillScreen();
     renderMesh();
-    $("version-note").textContent = "Every build compiles the pinned upstream commits; the catalogue's costs were measured there.";
+    $("version-note").textContent = "";
     render();
     renderBudget();
     await update();
   } catch (error) {
-    $("groups").innerHTML = '<p class="bad">Could not load the catalogue: ' + error.message + ".</p>";
+    $("groups").innerHTML = '<p class="bad">Could not load the catalogue: ' + error.message +
+      '.</p><p class="hint"><a href="" onclick="location.reload();return false">try again</a></p>';
   }
 }
 
@@ -437,17 +443,17 @@ function renderBudget() {
   $("predicted").textContent = human(p.flash);
   $("bar").classList.toggle("over", over > 0);
   $("bar-used").style.transform = "scaleX(" + Math.min(1, p.flash / reg).toFixed(4) + ")";
-  $("free").textContent = over ? "over by " + human(over) : human(reg - p.flash) + " free";
-  $("region").textContent = human(reg) + " region";
+  $("free").textContent = over ? "over by " + fmt(over) + " B" : fmt(reg - p.flash) + " B free";
+  $("region").textContent = "region " + fmt(reg) + " B";
   const diff = p.flash - (app.catalog.baseline ? app.catalog.baseline.flash : p.flash);
   const delta = $("delta");
-  if (diff === 0) { delta.textContent = "same size as the image you run now"; delta.className = "delta"; }
-  else if (diff < 0) { delta.textContent = human(-diff) + " smaller than what you run now"; delta.className = "delta good"; }
-  else { delta.textContent = human(diff) + " larger than what you run now"; delta.className = "delta bad"; }
+  if (diff === 0) { delta.textContent = "same size as the shipped image"; delta.className = "delta"; }
+  else if (diff < 0) { delta.textContent = human(-diff) + " smaller than the shipped image"; delta.className = "delta good"; }
+  else { delta.textContent = human(diff) + " larger than the shipped image"; delta.className = "delta bad"; }
   $("ramline").textContent = "RAM " + human(p.ram);
   const changed = app.catalog.features.filter((f) => usable(f) && isOn(f) !== !!f.on_by_default).length;
   const onCount = app.catalog.features.filter((f) => usable(f) && isOn(f)).length;
-  $("countline").textContent = onCount + " features on, " + changed + " changed from what you run";
+  $("countline").textContent = onCount + " features on, " + changed + " changed from the shipped build";
   const btn = $("build");
   const fits = p.flash <= reg;
   btn.disabled = !fits;
@@ -456,11 +462,19 @@ function renderBudget() {
 }
 
 async function update() {
+  const gen = ++app.gen;
   const { sel, tag } = await currentTag();
+  if (gen !== app.gen) return;
   app.tag = tag;
   const meta = await fetchRelease(tag);
-  if (meta) { showResult(meta); $("build-note").textContent = "This exact selection is already published - download below."; }
-  else { $("result").hidden = true; $("build-note").textContent = $("build").disabled ? $("build-note").textContent : ""; }
+  if (gen !== app.gen) return;
+  if (meta) {
+    showResult(meta, tag);
+    $("build-note").textContent = "This exact selection is already published - download below.";
+  } else {
+    $("result").hidden = true;
+    $("build-note").textContent = $("build").disabled ? $("build-note").textContent : "";
+  }
 }
 
 async function fetchRelease(tag) {
@@ -475,7 +489,8 @@ async function fetchRelease(tag) {
   } catch (error) { return null; }
 }
 
-async function showResult(meta) {
+async function showResult(meta, tag) {
+  if (tag && tag !== app.tag) return;
   const bin = meta.assets["firmware.bin"];
   const manifest = meta.assets["meta.json"];
   const log = meta.assets["build.log"];
@@ -491,7 +506,7 @@ async function showResult(meta) {
   $("r-sel").textContent = (sel.off.length ? "off: " + sel.off.join(", ") : "") +
     (sel.on.length ? (sel.off.length ? " · " : "") + "on: " + sel.on.join(", ") : "") ||
     "nothing changed from what you run";
-  $("r-sha").textContent = bin ? "in the manifest" : "-";
+  $("r-sha").textContent = meta.assets["checksums.txt"] ? "in checksums.txt" : (bin ? "in the build log" : "-");
   const link = (el, asset, fallbackName) => {
     if (asset) { el.href = asset.browser_download_url; el.hidden = false; }
     else if (fallbackName) { el.href = "https://github.com/" + REPO + "/releases/download/" + meta.tag + "/" + fallbackName; el.hidden = false; }
@@ -501,6 +516,8 @@ async function showResult(meta) {
   link($("manifest"), manifest, "meta.json");
   link($("loglink"), log, "build.log");
   link($("bundle"), bundle, null);
+  const sums = $("checksums");
+  if (sums) { link(sums, meta.assets["checksums.txt"], "checksums.txt"); }
 }
 
 async function dispatchWithToken(token, sel) {
@@ -562,7 +579,7 @@ function pollFor(tag) {
       clearInterval(app.poll);
       $("phase").textContent = "published";
       $("phase").className = "mono ok";
-      await showResult(meta);
+      await showResult(meta, tag);
       $("build-note").textContent = "Built and published " + meta.published + ".";
       return;
     }

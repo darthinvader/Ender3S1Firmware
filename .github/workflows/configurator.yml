@@ -15,12 +15,12 @@ on:
         description: Comma separated feature ids to turn OFF (see tools/configurator/features.json)
         default: ''
         required: false
-      mesh:
-        description: Default bed mesh size per axis (3..9, empty = catalogue default)
-        default: ''
-        required: false
       enable:
         description: Comma separated feature ids to turn ON (off by default)
+        default: ''
+        required: false
+      mesh:
+        description: Default bed mesh size per axis (3..9, empty = catalogue default)
         default: ''
         required: false
   workflow_call:
@@ -33,29 +33,63 @@ on:
         type: string
         default: ''
         required: false
-      mesh:
+      enable:
         type: string
         default: ''
         required: false
-      enable:
+      mesh:
         type: string
         default: ''
         required: false
     outputs:
       tag:
-        description: The release tag this selection was published as
-        value: ${{ jobs.build.outputs.tag }}
+        description: The release tag this selection is published as
+        value: ${{ jobs.check.outputs.tag }}
+      existed:
+        description: true when the release was already there and nothing was compiled
+        value: ${{ jobs.check.outputs.exists }}
 
 permissions:
   contents: write
 
 jobs:
+  check:
+    name: is this selection already published?
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      exists: ${{ steps.lookup.outputs.exists }}
+      tag: ${{ steps.lookup.outputs.tag }}
+    steps:
+      - name: Derive the build id and look it up
+        id: lookup
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MACHINE: ${{ inputs.machine }}
+          DISABLE: ${{ inputs.disable }}
+          ENABLE: ${{ inputs.enable }}
+          MESH: ${{ inputs.mesh }}
+        run: |
+          set -euo pipefail
+          sel="machine=$MACHINE;off=$DISABLE;mesh=$MESH"
+          if [ -n "$ENABLE" ]; then sel="$sel;on=$ENABLE"; fi
+          HASH=$(printf '%s' "$sel" | sha256sum | cut -c1-12)
+          TAG="build-$HASH"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "already published as $TAG - skipping the compile" | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "not published yet - compiling $TAG" | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+
   build:
     name: configurator build
+    needs: check
+    if: needs.check.outputs.exists != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 40
-    outputs:
-      tag: ${{ steps.publish.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
 
@@ -70,8 +104,8 @@ jobs:
         env:
           MACHINE: ${{ inputs.machine }}
           DISABLE: ${{ inputs.disable }}
-          MESH: ${{ inputs.mesh }}
           ENABLE: ${{ inputs.enable }}
+          MESH: ${{ inputs.mesh }}
         run: |
           python3 - <<'PY'
           import json, os
@@ -105,8 +139,13 @@ jobs:
         run: |
           BIN=$(ls -1t build/out/*.bin | head -n 1)
           python3 scripts/check-vector-table.py "$BIN"
-          sha256sum "$BIN"
           cp "$BIN" build/configurator/firmware.bin
+          ( cd build/configurator && sha256sum firmware.bin > checksums.txt && cat checksums.txt )
+
+      - name: Pack the bundle
+        run: |
+          cd build/configurator
+          zip -q -9 firmware-bundle.zip firmware.bin meta.json checksums.txt build.log
 
       - name: Upload firmware and manifest
         uses: actions/upload-artifact@v4
@@ -115,17 +154,18 @@ jobs:
           path: |
             build/configurator/firmware.bin
             build/configurator/meta.json
+            build/configurator/checksums.txt
             build/configurator/build.log
+            build/configurator/firmware-bundle.zip
           if-no-files-found: error
 
       - name: Publish this exact selection as a release (public download, no account)
-        id: publish
         env:
           GH_TOKEN: ${{ github.token }}
           MACHINE: ${{ inputs.machine }}
           DISABLE: ${{ inputs.disable }}
-          MESH: ${{ inputs.mesh }}
           ENABLE: ${{ inputs.enable }}
+          MESH: ${{ inputs.mesh }}
           RUN_ID: ${{ github.run_id }}
           SHA: ${{ github.sha }}
         run: |
@@ -135,24 +175,17 @@ jobs:
           HASH=$(printf '%s' "$sel" | sha256sum | cut -c1-12)
           TAG="build-$HASH"
           URL="https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/firmware.bin"
-          ( cd build/configurator && zip -q -9 firmware-bundle.zip firmware.bin meta.json build.log )
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "this selection is already published as $TAG" | tee -a "$GITHUB_STEP_SUMMARY"
-          else
-            gh release create "$TAG" \
-              build/configurator/firmware.bin \
-              build/configurator/meta.json \
-              build/configurator/build.log \
-              build/configurator/firmware-bundle.zip \
-              --title "Build $HASH - $MACHINE" \
-              --notes "Selection: $sel
+          gh release create "$TAG" \
+            build/configurator/firmware.bin \
+            build/configurator/meta.json \
+            build/configurator/checksums.txt \
+            build/configurator/build.log \
+            build/configurator/firmware-bundle.zip \
+            --title "Build $HASH - $MACHINE" \
+            --notes "Selection: $sel
           Built by workflow run $RUN_ID from commit $SHA.
           The image was verified with scripts/check-vector-table.py before publishing."
-            echo "published $TAG" | tee -a "$GITHUB_STEP_SUMMARY"
-          fi
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "hash=$HASH" >> "$GITHUB_OUTPUT"
-          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "published $TAG" | tee -a "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "**download:** $URL" >> "$GITHUB_STEP_SUMMARY"
 
