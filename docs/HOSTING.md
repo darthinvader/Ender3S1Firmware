@@ -4,6 +4,47 @@ The frontend is easy - it is a static page. The backend is the hard part: it
 **compiles C code**, so it needs a real machine with a disk, not a serverless
 function.
 
+## The one that needs no card at all: GitHub Actions + Cloudflare Pages Functions
+
+Oracle refused the signup cards, and every other VM free tier asks for one. The
+stack that needs **no card and no machine** is already half in this repository:
+
+1. **GitHub Actions** does the compiling. Free for public repositories, no card,
+   no quota that bills. [configurator.yml](../.github/workflows/configurator.yml)
+   builds a selection, verifies the vector table and publishes it as a release
+   under a deterministic tag, skipping the compile when that tag already exists.
+2. **A Pages Function** is the trigger. It lives next to this site in
+   [docs/functions/api/build.js](../docs/functions/api/build.js), holds a
+   repository-scoped token as a Pages secret, and answers
+   `POST /api/build` by dispatching the workflow. The same origin means no CORS,
+   no tunnel and nothing of yours reachable.
+3. **The page** prefers that function: it probes `/api/build/<tag>` on load and,
+   when it answers, Build posts the selection and polls until the release exists.
+   Anything already published downloads immediately.
+
+### Five minutes, no card
+
+1. Cloudflare dashboard -> *Workers & Pages* -> *Create* -> *Pages* -> connect the
+   GitHub repository, publish directory `docs`.
+2. Repository settings -> *Secrets and variables* -> *Actions* is not needed;
+   instead, in the Pages project: *Settings -> Variables and secrets -> Add*,
+   name `GH_TOKEN`, a fine-grained token with **Actions: read and write** and
+   **Contents: read** on this repository only.
+3. Deploy. The function is served with the site; the page switches to it by itself.
+
+A new selection takes the length of one compile (about 3 minutes); a selection
+that was built before downloads at once, because the function checks the release
+tag before dispatching anything.
+
+### When a real server is wanted anyway
+
+The same server also runs anywhere with Docker: [deploy/](../deploy) has the
+image, the compose file and a cloud-init script. Hosts that ask for a card -
+Oracle Always Free (2 OCPU / 12 GB / 200 GB, verified in their docs), Google
+Cloud `e2-micro`, AWS, Azure - all fit the footprint if the card goes through.
+Hugging Face Docker Spaces no longer fit the price (their docs: Docker Spaces
+require a paid plan).
+
 ## Where the backend can live: checked, not guessed
 
 The backend compiles with PlatformIO, so it needs a container-sized host: about

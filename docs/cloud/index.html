@@ -199,7 +199,7 @@ const RAW = "https://raw.githubusercontent.com/" + REPO + "/main/";
 const CATALOG_URL = RAW + "tools/configurator/features.json";
 const FENCE = String.fromCharCode(96).repeat(3);
 const app = { catalog: null, on: new Set(), off: new Set(), mesh: 7, filter: "", collapsed: {},
-              poll: 0, tag: null, job: null, gen: 0, backend: null };
+              poll: 0, tag: null, job: null, gen: 0, backend: null, mode: null };
 
 const $ = (id) => document.getElementById(id);
 const usable = (f) => f.buildable !== false;
@@ -532,6 +532,7 @@ async function startBuild() {
   if (!app.backend) return;
   if ($("build").disabled) return;
   const sel = selection();
+  if (app.mode === "pages") return startPagesBuild(sel);
   $("status").hidden = false;
   $("result").hidden = true;
   $("phase").textContent = "queued";
@@ -555,6 +556,75 @@ async function startBuild() {
     $("build-note").textContent = "The builder refused the job: " + error.message;
     $("build").disabled = false;
   }
+}
+
+async function startPagesBuild(sel) {
+  $("status").hidden = false;
+  $("result").hidden = true;
+  $("phase").textContent = "asking the builder";
+  $("phase").className = "mono warn";
+  $("jobid").textContent = "";
+  $("build").disabled = true;
+  try {
+    const res = await fetch("../api/build", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ machine: sel.machine, on: sel.on, off: sel.off, mesh: sel.mesh }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
+    $("jobid").textContent = data.tag || "";
+    if (data.status === "done") {
+      $("build").disabled = false;
+      await showRelease(data.tag);
+      $("phase").textContent = "already published";
+      $("phase").className = "mono ok";
+      return;
+    }
+    $("phase").textContent = "queued on GitHub Actions";
+    pollPages(data.tag);
+  } catch (error) {
+    $("phase").textContent = "refused";
+    $("phase").className = "mono bad";
+    $("build-note").textContent = "The builder refused the job: " + error.message;
+    $("build").disabled = false;
+  }
+}
+
+function pollPages(tag) {
+  clearInterval(app.poll);
+  const started = Date.now();
+  app.poll = setInterval(async () => {
+    try {
+      const res = await fetch("../api/build/" + tag);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
+      const seconds = Math.round((Date.now() - started) / 1000);
+      $("phase").textContent = data.status === "done" ? "published" : "compiling (" + seconds + " s)";
+      $("phase").className = "mono " + (data.status === "done" ? "ok" : "warn");
+      if (data.status === "done") {
+        clearInterval(app.poll);
+        $("build").disabled = false;
+        await showRelease(tag);
+      }
+    } catch (error) {
+      clearInterval(app.poll);
+      $("build").disabled = false;
+      $("phase").textContent = "lost contact";
+      $("phase").className = "mono bad";
+      $("build-note").textContent = "Could not read the build status: " + error.message;
+    }
+  }, 5000);
+}
+
+async function showRelease(tag) {
+  const meta = await fetchRelease(tag);
+  if (!meta) {
+    $("build-note").textContent = "Published as " + tag + " but the release could not be read yet; try again in a moment.";
+    return;
+  }
+  $("build-note").textContent = "Published " + meta.published + " - download below.";
+  showResult(meta, tag);
 }
 
 function pollJob(id) {
@@ -638,14 +708,21 @@ document.querySelectorAll(".preset").forEach((b) => { b.onclick = () => applyPre
 $("filter").oninput = (event) => { app.filter = event.target.value; render(); };
 $("build").onclick = startBuild;
 async function findBackend() {
+  // (a) the same-origin Pages Function: GET /api/build/<a tag that cannot exist>
+  try {
+    const probe = await fetch("../api/build/build-000000000000", { signal: AbortSignal.timeout(6000) });
+    if (probe.ok) { app.mode = "pages"; return ".."; }
+  } catch (error) { /* not deployed */ }
+  // (b) a self-hosted configurator named in backend.json
   try {
     const res = await fetch("backend.json?t=" + Date.now(), { cache: "no-store" });
     if (!res.ok) return null;
     const config = await res.json();
     if (!config.url) return null;
     const probe = await fetch(config.url + "/api/catalog", { signal: AbortSignal.timeout(6000) });
-    return probe.ok ? config.url : null;
-  } catch (error) { return null; }
+    if (probe.ok) { app.mode = "server"; return config.url; }
+  } catch (error) { /* offline */ }
+  return null;
 }
 
 async function boot() {
@@ -653,7 +730,9 @@ async function boot() {
   const state = $("builder-state");
   if (app.backend) {
     state.className = "hint ok";
-    state.textContent = "Public builder online: Build compiles on this machine and hands back the files.";
+    state.textContent = app.mode === "pages"
+      ? "Builder online: GitHub Actions compiles the selection and publishes it here. A new image takes a few minutes; anything already built downloads at once."
+      : "Builder online: this server compiles the selection and hands back the files in seconds.";
   } else {
     state.className = "hint warn";
     state.textContent = "Public builder offline right now. Downloads of already published images still work; " +
