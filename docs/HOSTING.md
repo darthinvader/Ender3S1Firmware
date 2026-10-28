@@ -4,33 +4,38 @@ The frontend is easy - it is a static page. The backend is the hard part: it
 **compiles C code**, so it needs a real machine with a disk, not a serverless
 function.
 
-## Recommended: no server, no bill
+## Deployed: no server, no account, nothing to bill
 
-Do not run the compiler on a host you pay for. Let **GitHub Actions** do the
-compiling and let the result live as a **release asset** - public repos get
-Actions minutes for free, and a release asset is downloadable by anyone without
-an account.
+The public build page is live at
+**https://darthinvader.github.io/Ender3S1Firmware/cloud/** and works like this:
 
-- The site (Pages, free) posts a selection to a small **Cloudflare Worker**
-  (free plan, hard request cap, no card on file).
-- The Worker validates the selection, allows **3 builds per IP per hour** and
-  **20 per day**, hashes it, and **returns the existing file if that exact
-  selection was built before** - repeat requests cost nothing.
-- A new selection dispatches @BT@configurator.yml@BT@, which compiles, verifies the ARM
-  vector table, and publishes @BT@build-<hash>@BT@ as a release with the image, the
-  manifest and the build log.
-- The Worker answers @BT@GET /api/build/<hash>@BT@ by checking that deterministic tag.
+1. The page (GitHub Pages, static) loads the catalogue and computes a
+   **deterministic build id** from the selection: the first 12 hex digits of
+   sha256 over `machine=<m>;off=<sorted ids>;mesh=<n>`.
+2. It asks the public GitHub API whether a release with that tag exists. If it
+   does, the button is a direct download of `firmware.bin` - no account needed.
+3. If it does not, the button opens a **prefilled GitHub issue**. The workflow
+   `build-request.yml` validates the JSON body against an allowlist, calls the
+   reusable `configurator.yml` to build it, publishes the release, comments the
+   download link back on the issue and closes it.
 
-What a spammer can achieve: a queued job, until the daily counter stops them.
-What they cannot achieve: a bill, because neither Workers nor public Actions
-minutes are metered against a payment method.
+Why this cannot become a bill: Pages and Actions are free for public
+repositories, releases are free, and **no payment method is involved anywhere
+in the path**. A flood produces queued jobs and closed issues, then GitHub's own
+rate limits, not an invoice.
 
-**Proven end to end, not sketched:** a dispatch with @BT@off=arc_support, mesh=7@BT@
-produced release @BT@build-e93da78f5654@BT@; the image downloads anonymously at
-229,956 bytes (HTTP 200, no cookies, no token), and its manifest predicts 229,352 B
-flash with 4,120 B free. The Worker's tag rule was cross-checked against the
-workflow on three selections and matches byte for byte; its pure logic passes 11
-tests. Setup and code: [deploy/cloudflare/README.md](../deploy/cloudflare/README.md).
+Verified end to end on 2026-10-28: issue #3 asked for `linear_advance` off with a
+5x5 mesh; the workflow built it, published **build-b6325c78b948** (firmware.bin
+224 KiB), commented the link and closed the issue. The same selection now shows
+a Download button on the page, while an unbuilt selection shows Request - the
+two states are mutually exclusive, including when inputs change quickly.
+
+### The optional Worker (a one-click button instead of an issue)
+
+[deploy/cloudflare/](../deploy/cloudflare) is a free-plan Cloudflare Worker that
+dispatches the workflow directly, with per-IP and per-day caps and
+deduplication by selection hash. It needs a Cloudflare account and a
+fine-grained token, so it is optional; the issue path above needs neither.
 
 ## What the backend actually needs (measured on this machine)
 

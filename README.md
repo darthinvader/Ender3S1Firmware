@@ -163,7 +163,9 @@ Everything on the page is served from the same process - there is no separate fr
 
 ## Configurator (optional)
 
-It runs locally in one command; if you want it on a server, [docs/HOSTING.md](docs/HOSTING.md) has the measured requirements and free-forever options ([deploy/](deploy) has the Docker image, compose file, systemd unit and tunnel config).
+**Build one online:** [darthinvader.github.io/Ender3S1Firmware/cloud](https://darthinvader.github.io/Ender3S1Firmware/cloud/) - switch features off, request the build, download the image. No server, no account, no bill; the workflow in this repository does the compiling and publishes each selection as a release.
+
+It also runs locally in one command; if you want it on a server, [docs/HOSTING.md](docs/HOSTING.md) has the measured requirements and free-forever options ([deploy/](deploy) has the Docker image, compose file, systemd unit and tunnel config).
 
 
 ![The build service, step by step: choose a checkpoint, measure a feature, build, verify](docs/img/configurator-demo.gif)
