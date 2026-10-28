@@ -3,122 +3,123 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Build a firmware image - Ender 3 S1 firmware factory</title>
-<meta name="description" content="Pick features like in the local configurator and get a compiled, verified Marlin image built by GitHub Actions and published as a release.">
+<title>Ender 3 S1 firmware configurator</title>
 <style>
-  :root { --bg:#0b0f16; --panel:#121824; --panel-2:#171f2e; --line:#232d3f; --ink:#e7ecf5;
+  :root { --bg:#0b0f16; --panel:#121824; --panel2:#171f2e; --line:#232d3f; --ink:#e7ecf5;
           --muted:#8b97ab; --accent:#4c8dff; --good:#43d17c; --bad:#ff5a52; --warn:#ffb020;
           color-scheme: dark; }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--ink);
-         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-  a { color: var(--accent); }
-  .topbar { position: sticky; top: 0; z-index: 20; display: flex; align-items: flex-start;
-            justify-content: space-between; gap: 24px; padding: 12px 22px; background: rgba(11,15,22,.94);
-            backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
-  .brand h1 { font-size: 1.05rem; margin: 0 0 2px; }
-  .brand p { margin: 0; color: var(--muted); font-size: .8rem; max-width: 70ch; }
-  main { display: grid; grid-template-columns: minmax(0,1fr) 380px; gap: 18px;
-         padding: 16px 22px 60px; align-items: start; }
-  @media (max-width: 1050px) { main { grid-template-columns: 1fr; } .side { order: -1; position: static !important; } }
-  .toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-  .toolbar input { flex: 1; padding: 8px 10px; border-radius: 8px; background: var(--panel-2);
-                   color: var(--ink); border: 1px solid var(--line); font: inherit; font-size: .88rem; }
-  .groups { display: flex; flex-direction: column; gap: 12px; }
-  .group { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
-  .group > h2 { margin: 0; padding: 9px 13px; font-size: .7rem; letter-spacing: .12em;
-                text-transform: uppercase; color: var(--muted); background: var(--panel-2);
-                border-bottom: 1px solid var(--line); display: flex; justify-content: space-between;
-                cursor: pointer; }
-  .group.collapsed .row { display: none; }
-  .row { display: grid; grid-template-columns: 22px 1fr auto; gap: 10px; align-items: start;
-         padding: 9px 13px; border-bottom: 1px solid rgba(35,45,63,.55); cursor: pointer; }
-  .row:last-child { border-bottom: none; }
-  .row:hover { background: rgba(76,141,255,.05); }
-  .row.changed { box-shadow: inset 3px 0 0 var(--accent); }
-  .row input { margin: 3px 0 0; width: 15px; height: 15px; accent-color: var(--accent); }
-  .row .name { font-weight: 600; font-size: .9rem; display: flex; gap: 8px; align-items: center; }
-  .row .sub { color: var(--muted); font-size: .8rem; margin-top: 2px; }
-  .row .cost { font-family: ui-monospace, monospace; font-size: .78rem; color: var(--muted);
-               white-space: nowrap; padding-top: 2px; }
-  .row .cost.measured { color: var(--good); }
-  .careful { font-size: .62rem; letter-spacing: .08em; text-transform: uppercase; color: #2a1600;
-             background: var(--warn); border-radius: 4px; padding: 1px 5px; font-weight: 700; }
-  .side { position: sticky; top: 72px; display: flex; flex-direction: column; gap: 12px;
-          max-height: calc(100vh - 88px); overflow-y: auto; }
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
-  .card > h2 { margin: 0 0 10px; font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
-  .radiogroup { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
-  .radio { display: flex; align-items: center; gap: 6px; flex: 1 1 42%; padding: 6px 8px;
-           border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2);
-           font-size: .8rem; cursor: pointer; }
-  .radio input { accent-color: var(--accent); }
-  .radio.on { border-color: var(--accent); background: rgba(76,141,255,.16); }
-  .presets { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
-  .preset { flex: 1 1 auto; padding: 7px 9px; font-size: .78rem; border-radius: 8px; cursor: pointer;
-            background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); }
-  .preset:hover { border-color: var(--accent); }
-  .preset.active { background: rgba(76,141,255,.18); border-color: var(--accent); }
-  .budget-head { display: flex; justify-content: space-between; font-size: .8rem; margin-bottom: 6px; }
-  .bar { position: relative; height: 8px; background: #0d1220; border-radius: 4px; overflow: hidden; }
-  .bar-used { position: absolute; left: 0; top: 0; height: 100%; width: 100%; transform: scaleX(0);
-              transform-origin: left; background: linear-gradient(90deg,#3d7be0,#6aa6ff);
-              transition: transform .18s ease-out; }
-  .bar.over .bar-used { background: linear-gradient(90deg,#a33,var(--bad)); }
-  .budget-foot { display: flex; justify-content: space-between; font-size: .76rem; color: var(--muted);
-                 margin-top: 5px; font-variant-numeric: tabular-nums; }
-  .delta { font-size: .82rem; margin: 9px 0 0; }
-  .delta.good { color: var(--good); }
-  .delta.bad { color: var(--bad); }
-  .kv { display: flex; justify-content: space-between; font-size: .82rem; padding: 2px 0;
-        font-variant-numeric: tabular-nums; }
-  .kv b { font-family: ui-monospace, monospace; }
-  .hint { color: var(--muted); font-size: .78rem; margin: 8px 0 0; }
-  .mono { font-family: ui-monospace, monospace; font-size: .8rem; word-break: break-all;
-          font-variant-numeric: tabular-nums; }
-  .btn { display: block; width: 100%; text-align: center; padding: 11px 12px; border-radius: 9px;
-         border: 1px solid var(--accent); background: var(--accent); color: #06101f; font-weight: 700;
-         font-size: .9rem; cursor: pointer; text-decoration: none; margin-top: 10px; }
-  .btn.ghost { background: transparent; color: var(--ink); border-color: var(--line); font-weight: 600; }
-  .btn[disabled] { opacity: .5; cursor: not-allowed; }
-  [hidden] { display: none !important; }
-  .status { margin-top: 10px; font-size: .84rem; }
-  .ok { color: var(--good); } .warn { color: var(--warn); } .bad { color: var(--bad); }
-  .skip { position: absolute; left: -9999px; }
-  .skip:focus { left: 8px; top: 8px; background: var(--accent); color: #06101f; padding: 6px 10px; border-radius: 6px; }
-  footer { color: var(--muted); font-size: .8rem; border-top: 1px solid var(--line);
-           margin: 0 22px; padding: 14px 0 40px; }
-  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  body { margin:0; background:var(--bg); color:var(--ink);
+         font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  a { color:var(--accent); }
+  code { font-family:ui-monospace,monospace; font-size:.85em; }
+  .topbar { position:sticky; top:0; z-index:20; display:flex; justify-content:space-between;
+            gap:20px; align-items:flex-start; padding:12px 22px; background:rgba(11,15,22,.95);
+            backdrop-filter:blur(8px); border-bottom:1px solid var(--line); }
+  .brand h1 { font-size:1.05rem; margin:0 0 2px; }
+  .brand p { margin:0; color:var(--muted); font-size:.8rem; max-width:62ch; }
+  .controls { display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+  .controls label { font-size:.72rem; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
+  select, input[type=search], input[type=password] { background:var(--panel2); color:var(--ink);
+      border:1px solid var(--line); border-radius:8px; padding:7px 9px; font:inherit; font-size:.87rem; }
+  main { display:grid; grid-template-columns:minmax(0,1fr) 400px; gap:18px; padding:16px 22px 60px; align-items:start; }
+  @media (max-width:1050px) { main { grid-template-columns:1fr; } .side { order:-1; } }
+  .toolbar { display:flex; gap:10px; align-items:center; margin-bottom:10px; }
+  .toolbar input { flex:1; }
+  .groups { display:flex; flex-direction:column; gap:12px; }
+  .group { background:var(--panel); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+  .group > h2 { margin:0; padding:9px 13px; font-size:.7rem; letter-spacing:.12em; text-transform:uppercase;
+                color:var(--muted); background:var(--panel2); border-bottom:1px solid var(--line);
+                display:flex; justify-content:space-between; cursor:pointer; }
+  .group.collapsed .row { display:none; }
+  .row { display:grid; grid-template-columns:22px 1fr auto; gap:10px; align-items:start;
+         padding:9px 13px; border-bottom:1px solid rgba(35,45,63,.55); cursor:pointer; }
+  .row:last-child { border-bottom:none; }
+  .row:hover { background:rgba(76,141,255,.05); }
+  .row.changed { box-shadow:inset 3px 0 0 var(--accent); }
+  .row input { margin:3px 0 0; width:15px; height:15px; accent-color:var(--accent); }
+  .row .name { font-weight:600; font-size:.9rem; }
+  .row .sub { color:var(--muted); font-size:.8rem; margin-top:2px; }
+  .row .cost { font-family:ui-monospace,monospace; font-size:.78rem; color:var(--good); white-space:nowrap; }
+  .side { position:sticky; top:74px; display:flex; flex-direction:column; gap:12px; max-height:calc(100vh - 92px); overflow-y:auto; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px; }
+  .card > h2 { margin:0 0 10px; font-size:.72rem; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
+  .card label { display:block; font-size:.76rem; color:var(--muted); margin:8px 0 4px; }
+  .card select { width:100%; }
+  .presets { display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; }
+  .preset { flex:1 1 auto; padding:7px 8px; font-size:.76rem; border-radius:8px; cursor:pointer;
+            background:var(--panel2); color:var(--ink); border:1px solid var(--line); }
+  .preset.active { background:rgba(76,141,255,.18); border-color:var(--accent); }
+  .radiogroup { display:flex; gap:6px; flex-wrap:wrap; }
+  .radio { display:flex; align-items:center; gap:6px; flex:1 1 42%; padding:6px 8px;
+           border:1px solid var(--line); border-radius:8px; background:var(--panel2); font-size:.78rem; cursor:pointer; }
+  .radio.on { border-color:var(--accent); background:rgba(76,141,255,.16); }
+  .budget-head { display:flex; justify-content:space-between; font-size:.8rem; margin:10px 0 6px; }
+  .bar { height:8px; background:#0d1220; border-radius:4px; overflow:hidden; position:relative; }
+  .bar-used { height:100%; width:100%; transform:scaleX(0); transform-origin:left;
+              background:linear-gradient(90deg,#3d7be0,#6aa6ff); transition:transform .18s ease-out; }
+  .bar.over .bar-used { background:linear-gradient(90deg,#a33,var(--bad)); }
+  .budget-foot { display:flex; justify-content:space-between; font-size:.76rem; color:var(--muted);
+                 margin-top:5px; font-variant-numeric:tabular-nums; }
+  .delta { font-size:.82rem; margin:8px 0 0; }
+  .delta.good { color:var(--good); } .delta.bad { color:var(--bad); }
+  .hint { color:var(--muted); font-size:.78rem; margin:8px 0 0; }
+  .mono { font-family:ui-monospace,monospace; font-variant-numeric:tabular-nums; }
+  .primary { display:block; width:100%; margin-top:12px; padding:11px 12px; border-radius:9px;
+             border:1px solid var(--accent); background:var(--accent); color:#06101f; font-weight:700;
+             font-size:.92rem; cursor:pointer; }
+  .primary[disabled] { opacity:.45; cursor:not-allowed; }
+  .ghost { display:block; width:100%; margin-top:8px; padding:9px 12px; border-radius:9px;
+           border:1px solid var(--line); background:transparent; color:var(--ink); font-size:.85rem;
+           cursor:pointer; text-align:center; text-decoration:none; }
+  .small-btn { display:inline-block; width:auto; padding:5px 9px; font-size:.75rem; margin:6px 0 0; }
+  table.kv { width:100%; border-collapse:collapse; font-size:.82rem; }
+  table.kv th { text-align:left; color:var(--muted); font-weight:500; padding:2px 0; }
+  table.kv td { text-align:right; font-variant-numeric:tabular-nums; }
+  .actions { display:flex; gap:6px; margin-top:10px; flex-wrap:wrap; }
+  .actions .ghost { flex:1 1 30%; margin-top:0; }
+  .actions .primary { flex:1 1 40%; margin-top:0; padding:9px; text-align:center; text-decoration:none; }
+  .status-line { display:flex; justify-content:space-between; font-size:.85rem; }
+  .log { background:#0a0e15; border:1px solid var(--line); border-radius:8px; padding:8px;
+         font-size:.74rem; max-height:180px; overflow:auto; margin:8px 0 0; white-space:pre-wrap; }
+  .badge { font-size:.7rem; padding:1px 6px; border-radius:4px; background:var(--panel2); color:var(--muted); }
+  .ok { color:var(--good); } .warn { color:var(--warn); } .bad { color:var(--bad); }
+  [hidden] { display:none !important; }
+  footer { color:var(--muted); font-size:.8rem; border-top:1px solid var(--line); margin:0 22px; padding:14px 0 40px; }
+  .skip { position:absolute; left:-9999px; }
+  .skip:focus { left:8px; top:8px; background:var(--accent); color:#06101f; padding:6px 10px; border-radius:6px; }
+  @media (prefers-reduced-motion:reduce) { * { transition:none !important; } }
 </style>
 </head>
 <body>
-<a class="skip" href="#groups">Skip to the features</a>
+<a class="skip" href="#groups">Skip to the feature list</a>
+
 <header class="topbar">
   <div class="brand">
-    <h1>Ender 3 S1 firmware factory</h1>
-    <p>Pick features exactly like the local app. The image is compiled by GitHub Actions from the
-       pinned commits, verified, and published as a release - the download needs no account.</p>
+    <h1>Ender 3 S1 firmware</h1>
+    <p>Pick features, build the image, download it. Costs are measured from real builds of this configuration.</p>
   </div>
-  <div class="brand" style="text-align:right">
-    <p class="muted" style="color:#8b97ab;font-size:.78rem">machine</p>
-    <p style="margin:0;font-size:.86rem" id="machine-label">Ender 3 S1 / S1 Pro board v2.4.S1.301</p>
+  <div class="controls">
+    <label for="machine">Machine</label>
+    <select id="machine"></select>
   </div>
 </header>
 
 <main>
-  <section>
+  <section class="list-col">
     <div class="toolbar">
-      <input id="filter" type="search" placeholder="Filter features by name or description" autocomplete="off">
-      <span id="count" class="hint" style="margin:0"></span>
+      <input id="filter" type="search" placeholder="Filter features by name, id or description" autocomplete="off">
+      <span id="filter-count" class="hint mono" style="margin:0"></span>
     </div>
     <div id="groups" class="groups" aria-live="polite"><p class="hint">loading the catalogue ...</p></div>
   </section>
 
   <aside class="side">
     <section class="card">
-      <h2>Bed mesh default</h2>
-      <div class="radiogroup" id="mesh-options"></div>
-      <p class="hint" id="mesh-note"></p>
+      <h2>Mainboard firmware</h2>
+      <label for="version">Upstream checkpoint</label>
+      <select id="version"><option>the pinned build (what the workflow uses)</option></select>
+      <p class="hint" id="version-note"></p>
     </section>
 
     <section class="card">
@@ -128,88 +129,132 @@
         <button class="preset" data-preset="min">Minimum</button>
         <button class="preset" data-preset="fit">Add what fits</button>
       </div>
+      <label>Mesh size</label>
+      <div class="radiogroup" id="mesh-options"></div>
+      <p class="hint" id="mesh-note"></p>
       <div class="budget-head"><span>Predicted flash</span><span id="predicted" class="mono">-</span></div>
       <div class="bar" id="bar"><div class="bar-used" id="bar-used"></div></div>
-      <div class="budget-foot"><span id="free">-</span><span id="region">-</span></div>
+      <div class="budget-foot"><span id="free" class="mono">-</span><span id="region" class="mono">-</span></div>
       <p class="delta" id="delta"></p>
-      <p class="hint" id="ramline"></p>
+      <p class="hint mono" id="ramline"></p>
       <p class="hint" id="countline"></p>
-      <p class="hint" id="mbline"></p>
+      <button id="build" class="primary">Build firmware</button>
+      <p class="hint" id="build-note"></p>
+      <details id="connect">
+        <summary class="hint">Connect GitHub (optional, one click instead of a request)</summary>
+        <label for="token">Fine-grained token: Actions read and write, this repository only</label>
+        <input id="token" type="password" placeholder="github_pat_..." autocomplete="off">
+        <button id="save-token" class="ghost small-btn">save in this browser</button>
+        <p class="hint">Stored only in localStorage on this device; it lets the button dispatch the workflow
+          directly. Without it the button opens a prefilled issue, and the download never needs an account.</p>
+      </details>
     </section>
 
-    <section class="card">
-      <h2>This selection</h2>
-      <div class="kv"><span>features changed</span><b id="changed">0</b></div>
-      <div class="kv"><span>build id</span><b id="hash" class="mono">-</b></div>
-      <p class="status" id="status">checking whether this exact image already exists ...</p>
-      <a class="btn" id="download" href="#" hidden>Download firmware.bin</a>
-      <a class="btn" id="request" href="#" hidden>Request this build</a>
-      <p class="hint">A request opens a GitHub issue; the workflow builds it and replies with the link.
-        Nothing is metered and there is no server to overload.</p>
+    <section class="card" id="screen-card">
+      <h2>Screen firmware</h2>
+      <label for="screen-os">Screen OS image</label>
+      <select id="screen-os"></select>
+      <label for="screen-assets">Screen menus and icons</label>
+      <select id="screen-assets"></select>
+      <p class="hint" id="screen-note"></p>
+      <div class="actions">
+        <a class="ghost" id="screen-download" href="#" hidden>Download screen image</a>
+        <a class="ghost" id="screen-assets-download" href="#" hidden>Download asset pack</a>
+      </div>
+    </section>
+
+    <section class="card" id="status" hidden>
+      <h2>Build status</h2>
+      <div class="status-line"><span id="phase" class="mono">idle</span><span id="jobid" class="mono hint"></span></div>
+      <pre id="log" class="log" hidden></pre>
+      <a class="ghost small-btn" id="run-link" href="#" hidden>open the run</a>
+    </section>
+
+    <section class="card" id="result" hidden>
+      <h2>Result</h2>
+      <table class="kv">
+        <tr><th>File</th><td id="r-size" class="mono"></td></tr>
+        <tr><th>Predicted</th><td id="r-pred" class="mono"></td></tr>
+        <tr><th>Free in region</th><td id="r-free" class="mono"></td></tr>
+        <tr><th>RAM</th><td id="r-ram" class="mono"></td></tr>
+        <tr><th>Mesh</th><td id="r-mesh" class="mono"></td></tr>
+        <tr><th>Selection</th><td id="r-sel" class="small"></td></tr>
+        <tr><th>SHA-256</th><td id="r-sha" class="mono small"></td></tr>
+      </table>
+      <div class="actions">
+        <a class="primary" id="download" href="#" hidden>Download .bin</a>
+        <a class="ghost" id="manifest" href="#" hidden>Manifest</a>
+        <a class="ghost" id="bundle" href="#" hidden>Bundle (.zip)</a>
+        <a class="ghost" id="loglink" href="#" hidden>Build log</a>
+      </div>
     </section>
   </aside>
 </main>
 
 <footer>
-  Costs are measured from real builds of this configuration; the catalogue and the workflows live in
-  <a href="https://github.com/darthinvader/Ender3S1Firmware">the repository</a>.
+  <p>Costs come from real builds of this configuration, not datasheets.
+     <a href="https://github.com/darthinvader/Ender3S1Firmware/blob/main/README.md">how it works</a>
+     &nbsp;|&nbsp; flashing: <a href="https://github.com/darthinvader/Ender3S1Firmware/blob/main/docs/FLASHING.md">docs/FLASHING.md</a> and
+     <a href="https://github.com/darthinvader/Ender3S1Firmware/blob/main/docs/SCREEN.md">docs/SCREEN.md</a>.</p>
 </footer>
 
 <script>
 const REPO = "darthinvader/Ender3S1Firmware";
-const CATALOG_URL = "https://raw.githubusercontent.com/" + REPO + "/main/tools/configurator/features.json";
+const RAW = "https://raw.githubusercontent.com/" + REPO + "/main/";
+const CATALOG_URL = RAW + "tools/configurator/features.json";
 const FENCE = String.fromCharCode(96).repeat(3);
-const state = { catalog: null, on: new Set(), off: new Set(), mesh: 7, filter: "", collapsed: {}, gen: 0 };
+const app = { catalog: null, on: new Set(), off: new Set(), mesh: 7, filter: "", collapsed: {},
+              poll: 0, tag: null, job: null };
 
-function el(id) { return document.getElementById(id); }
-function usable(f) { return f.buildable !== false; }
-function priced(f) { return f.cost_source === "measured" && typeof f.flash === "number" && f.flash !== 0; }
+const $ = (id) => document.getElementById(id);
+const usable = (f) => f.buildable !== false;
+const priced = (f) => f.cost_source === "measured" && typeof f.flash === "number" && f.flash !== 0;
+const fmt = (n) => Number(n || 0).toLocaleString("en-US");
+const mb = (bytes) => (Number(bytes || 0) / (1024 * 1024)).toFixed(2) + " MiB";
+const human = (bytes) => fmt(bytes) + " B · " + mb(bytes);
+
 function isOn(f) {
-  if (state.on.has(f.id)) return true;
-  if (state.off.has(f.id)) return false;
+  if (app.on.has(f.id)) return true;
+  if (app.off.has(f.id)) return false;
   return !!f.on_by_default;
 }
-function setFeature(fid, value) {
-  const f = state.catalog.features.find((x) => x.id === fid);
+function setFeature(id, value) {
+  const f = app.catalog.features.find((x) => x.id === id);
   if (!f) return;
-  if (value === !!f.on_by_default) { state.on.delete(fid); state.off.delete(fid); }
-  else if (value) { state.on.add(fid); state.off.delete(fid); }
-  else { state.off.add(fid); state.on.delete(fid); }
+  if (value === !!f.on_by_default) { app.on.delete(id); app.off.delete(id); }
+  else if (value) { app.on.add(id); app.off.delete(id); }
+  else { app.off.add(id); app.on.delete(id); }
 }
-function withDependencies(fid, value) {
-  const byId = (id) => state.catalog.features.find((x) => x.id === id);
+function withDependencies(id, value) {
+  const byId = (x) => app.catalog.features.find((f) => f.id === x);
   if (value) {
-    const queue = [fid];
+    const queue = [id];
     while (queue.length) {
-      const current = byId(queue.pop());
-      if (!current) continue;
-      for (const req of current.requires || []) {
+      const cur = byId(queue.pop());
+      if (!cur) continue;
+      for (const req of cur.requires || []) {
         const target = byId(req);
         if (target && usable(target) && !isOn(target)) { setFeature(req, true); queue.push(req); }
       }
-      for (const other of current.conflicts || []) {
+      for (const other of cur.conflicts || []) {
         const target = byId(other);
         if (target && isOn(target)) setFeature(other, false);
       }
     }
   } else {
-    let changed = true;
-    while (changed) {
-      changed = false;
-      for (const f of state.catalog.features) {
-        if (!isOn(f)) continue;
-        if ((f.requires || []).includes(fid)) { setFeature(f.id, false); changed = true; }
+    let again = true;
+    while (again) {
+      again = false;
+      for (const f of app.catalog.features) {
+        if (isOn(f) && (f.requires || []).includes(id)) { setFeature(f.id, false); again = true; }
       }
     }
   }
 }
-function fmt(n) { return Number(n || 0).toLocaleString("en-US"); }
-function mb(bytes) { return (bytes / (1024 * 1024)).toFixed(2) + " MiB"; }
-
 function predicted() {
-  const base = state.catalog.baseline || { flash: 0, ram: 0 };
+  const base = app.catalog.baseline || { flash: 0, ram: 0 };
   let flash = base.flash, ram = base.ram;
-  for (const f of state.catalog.features) {
+  for (const f of app.catalog.features) {
     if (!usable(f)) continue;
     const was = !!f.on_by_default, now = isOn(f);
     if (was === now) continue;
@@ -218,221 +263,345 @@ function predicted() {
   }
   return { flash, ram, base };
 }
+function region() {
+  const m = app.catalog.machines.find((x) => x.id === $("machine").value) || {};
+  return m.flash_region || 233472;
+}
+function selection() {
+  const on = [], off = [];
+  for (const f of app.catalog.features) {
+    if (!usable(f)) continue;
+    const now = isOn(f), was = !!f.on_by_default;
+    if (now && !was) on.push(f.id);
+    if (!now && was) off.push(f.id);
+  }
+  return { machine: $("machine").value, on: on.sort(), off: off.sort(), mesh: app.mesh };
+}
+async function sha256Hex(text) {
+  const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(d)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+function tagLine(sel) {
+  let line = "machine=" + sel.machine + ";off=" + sel.off.join(",") + ";mesh=" + sel.mesh;
+  if (sel.on.length) line += ";on=" + sel.on.join(",");
+  return line;
+}
+async function currentTag() {
+  const sel = selection();
+  return { sel: sel, tag: "build-" + (await sha256Hex(tagLine(sel))).slice(0, 12) };
+}
 
 async function loadCatalog() {
   try {
     const cached = localStorage.getItem("e3s1-catalog");
     const at = localStorage.getItem("e3s1-catalog-at");
-    if (cached && at && (Date.now() - Number(at)) < 3600 * 1000) state.catalog = JSON.parse(cached);
+    if (cached && at && Date.now() - Number(at) < 3600 * 1000) app.catalog = JSON.parse(cached);
     else {
       const res = await fetch(CATALOG_URL, { cache: "no-cache" });
       if (!res.ok) throw new Error("HTTP " + res.status);
-      state.catalog = await res.json();
-      localStorage.setItem("e3s1-catalog", JSON.stringify(state.catalog));
+      app.catalog = await res.json();
+      localStorage.setItem("e3s1-catalog", JSON.stringify(app.catalog));
       localStorage.setItem("e3s1-catalog-at", String(Date.now()));
     }
-    state.mesh = (state.catalog.mesh && state.catalog.mesh.default) || 7;
-    const machine = (state.catalog.machines || []).find((m) => m.supported);
-    if (machine) el("machine-label").textContent = machine.label;
+    app.mesh = (app.catalog.mesh && app.catalog.mesh.default) || 7;
+    fillMachines();
+    fillScreen();
     renderMesh();
+    $("version-note").textContent = "Every build compiles the pinned upstream commits; the catalogue's costs were measured there.";
     render();
+    renderBudget();
+    await update();
   } catch (error) {
-    el("groups").innerHTML = '<p class="bad">Could not load the catalogue: ' + error.message + '.</p>';
+    $("groups").innerHTML = '<p class="bad">Could not load the catalogue: ' + error.message + ".</p>";
   }
 }
 
+function fillMachines() {
+  const host = $("machine");
+  host.innerHTML = "";
+  (app.catalog.machines || []).forEach((m) => {
+    const option = document.createElement("option");
+    option.value = m.id;
+    option.textContent = m.label + (m.supported ? "" : " - not supported here");
+    option.disabled = !m.supported;
+    if (m.supported) option.selected = true;
+    host.appendChild(option);
+  });
+  host.onchange = async () => { render(); renderBudget(); await update(); };
+}
+
+function fillScreen() {
+  const screen = app.catalog.screen || { os: [], assets: [] };
+  const fill = (id, entries) => {
+    const host = $(id);
+    host.innerHTML = "";
+    entries.forEach((entry) => {
+      const option = document.createElement("option");
+      option.value = entry.id;
+      option.textContent = entry.label + " (" + human(entry.bytes || 0) + ")";
+      host.appendChild(option);
+    });
+    return entries;
+  };
+  const os = fill("screen-os", screen.os || []);
+  const assets = fill("screen-assets", screen.assets || []);
+  const sync = () => {
+    const osEntry = os.find((x) => x.id === $("screen-os").value);
+    const assetEntry = assets.find((x) => x.id === $("screen-assets").value);
+    const osLink = $("screen-download"), assetLink = $("screen-assets-download");
+    if (osEntry) { osLink.href = RAW + osEntry.path; osLink.hidden = false; }
+    else osLink.hidden = true;
+    if (assetEntry && (assetEntry.path || assetEntry.files)) {
+      assetLink.href = assetEntry.path ? RAW + assetEntry.path : "https://github.com/" + REPO + "/tree/main/screen/" + assetEntry.id;
+      assetLink.hidden = false;
+    } else assetLink.hidden = true;
+    $("screen-note").textContent = (screen.note || "").slice(0, 220);
+  };
+  $("screen-os").onchange = sync;
+  $("screen-assets").onchange = sync;
+  sync();
+}
+
 function renderMesh() {
-  const spec = state.catalog.mesh || { presets: [3, 5, 7, 9], default: 7 };
-  const host = el("mesh-options");
+  const spec = app.catalog.mesh || { presets: [3, 5, 7, 9], default: 7 };
+  const host = $("mesh-options");
   host.innerHTML = "";
   (spec.presets || [7]).forEach((n) => {
     const label = document.createElement("label");
-    label.className = "radio" + (n === state.mesh ? " on" : "");
+    label.className = "radio" + (n === app.mesh ? " on" : "");
     const input = document.createElement("input");
-    input.type = "radio"; input.name = "mesh"; input.value = String(n); input.checked = n === state.mesh;
-    input.onchange = () => { state.mesh = n; renderMesh(); renderBudget(); update(); };
+    input.type = "radio"; input.name = "mesh"; input.value = String(n); input.checked = n === app.mesh;
+    input.onchange = async () => { app.mesh = n; renderMesh(); renderBudget(); await update(); };
     const text = document.createElement("span");
     text.textContent = n + " x " + n + " (" + n * n + " pts)";
     label.appendChild(input); label.appendChild(text); host.appendChild(label);
   });
-  el("mesh-note").textContent = "Default for a fresh EEPROM; the printer can still change it 3..9.";
+  $("mesh-note").textContent = "Default for a fresh EEPROM; the printer can still change it between 3 and 9.";
 }
 
 function render() {
-  const host = el("groups");
+  const host = $("groups");
   const scroll = window.scrollY;
   host.innerHTML = "";
+  const needle = app.filter.trim().toLowerCase();
   let shown = 0;
-  (state.catalog.groups || []).forEach((group) => {
-    const all = state.catalog.features.filter((f) => f.group === group && usable(f));
-    const needle = state.filter.trim().toLowerCase();
+  (app.catalog.groups || []).forEach((group) => {
+    const all = app.catalog.features.filter((f) => f.group === group && usable(f));
     const feats = all.filter((f) => !needle ||
       (f.label + " " + f.id + " " + (f.summary || "")).toLowerCase().includes(needle));
     if (!feats.length) return;
     shown += feats.length;
     const box = document.createElement("div");
-    box.className = "group" + (state.collapsed[group] ? " collapsed" : "");
+    box.className = "group" + (app.collapsed[group] ? " collapsed" : "");
     const head = document.createElement("h2");
     const left = document.createElement("span");
     left.textContent = group + "  (" + feats.filter(isOn).length + "/" + feats.length + ")";
     const right = document.createElement("span");
-    right.textContent = state.collapsed[group] ? "show" : "hide";
+    right.textContent = app.collapsed[group] ? "show" : "hide";
     head.appendChild(left); head.appendChild(right);
-    head.onclick = () => { state.collapsed[group] = !state.collapsed[group]; render(); };
+    head.onclick = () => { app.collapsed[group] = !app.collapsed[group]; render(); };
     box.appendChild(head);
     feats.forEach((f) => {
       const row = document.createElement("label");
       row.className = "row" + (isOn(f) !== !!f.on_by_default ? " changed" : "");
       const cb = document.createElement("input");
       cb.type = "checkbox"; cb.checked = isOn(f);
-      cb.onchange = () => { setFeature(f.id, cb.checked); withDependencies(f.id, cb.checked); render(); renderBudget(); update(); };
+      cb.onchange = async () => {
+        setFeature(f.id, cb.checked);
+        withDependencies(f.id, cb.checked);
+        render(); renderBudget(); await update();
+      };
       const text = document.createElement("div");
       const name = document.createElement("div");
-      name.className = "name";
-      name.textContent = f.label;
-      if (f.risk === "high") {
-        const badge = document.createElement("span");
-        badge.className = "careful"; badge.textContent = "careful";
-        name.appendChild(badge);
-      }
+      name.className = "name"; name.textContent = f.label;
       const sub = document.createElement("div");
       sub.className = "sub"; sub.textContent = f.summary;
       text.appendChild(name); text.appendChild(sub);
       const cost = document.createElement("span");
-      cost.className = "cost" + (priced(f) ? " measured" : "");
-      cost.textContent = priced(f) ? ((f.flash > 0 ? "+" : "") + fmt(f.flash) + " B") : "~0 B";
+      cost.className = "cost";
+      cost.textContent = priced(f) ? (f.flash > 0 ? "+" : "") + fmt(f.flash) + " B" : "~0 B";
       row.appendChild(cb); row.appendChild(text); row.appendChild(cost);
       box.appendChild(row);
     });
     host.appendChild(box);
   });
   if (!shown) host.innerHTML = '<p class="hint">No feature matches that filter.</p>';
-  el("count").textContent = shown + " shown";
+  $("filter-count").textContent = shown + " shown";
   window.scrollTo(0, scroll);
 }
 
 function renderBudget() {
-  const region = (state.catalog.machines.find((m) => m.supported) || {}).flash_region || 233472;
   const p = predicted();
-  const over = Math.max(0, p.flash - region);
-  const used = Math.min(p.flash, region);
-  el("predicted").textContent = fmt(p.flash) + " B  ·  " + mb(p.flash);
-  el("bar").classList.toggle("over", over > 0);
-  el("bar-used").style.transform = "scaleX(" + Math.min(1, used / region).toFixed(4) + ")";
-  el("free").textContent = over ? ("over by " + fmt(over) + " B") : (fmt(region - p.flash) + " B free");
-  el("region").textContent = fmt(region) + " B region";
-  const diff = p.flash - (state.catalog.baseline ? state.catalog.baseline.flash : p.flash);
-  const delta = el("delta");
+  const reg = region();
+  const over = Math.max(0, p.flash - reg);
+  $("predicted").textContent = human(p.flash);
+  $("bar").classList.toggle("over", over > 0);
+  $("bar-used").style.transform = "scaleX(" + Math.min(1, p.flash / reg).toFixed(4) + ")";
+  $("free").textContent = over ? "over by " + human(over) : human(reg - p.flash) + " free";
+  $("region").textContent = human(reg) + " region";
+  const diff = p.flash - (app.catalog.baseline ? app.catalog.baseline.flash : p.flash);
+  const delta = $("delta");
   if (diff === 0) { delta.textContent = "same size as the image you run now"; delta.className = "delta"; }
-  else if (diff < 0) { delta.textContent = fmt(-diff) + " B smaller than what you run now"; delta.className = "delta good"; }
-  else { delta.textContent = fmt(diff) + " B larger than what you run now"; delta.className = "delta bad"; }
-  el("ramline").textContent = "RAM " + fmt(p.ram) + " B  ·  " + mb(p.ram);
-  el("mbline").textContent = "file size is reported by the build; the prediction covers flash only";
-  const changed = state.catalog.features.filter((f) => usable(f) && isOn(f) !== !!f.on_by_default).length;
-  const onCount = state.catalog.features.filter((f) => usable(f) && isOn(f)).length;
-  el("countline").textContent = onCount + " features on, " + changed + " changed from what you run";
-}
-
-async function sha256Hex(text) {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
-  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-function selection() {
-  const on = [], off = [];
-  for (const f of state.catalog.features) {
-    if (!usable(f)) continue;
-    const now = isOn(f), was = !!f.on_by_default;
-    if (now && !was) on.push(f.id);
-    if (!now && was) off.push(f.id);
-  }
-  return { machine: "ender3s1-f103", on: on.sort(), off: off.sort(), mesh: state.mesh };
+  else if (diff < 0) { delta.textContent = human(-diff) + " smaller than what you run now"; delta.className = "delta good"; }
+  else { delta.textContent = human(diff) + " larger than what you run now"; delta.className = "delta bad"; }
+  $("ramline").textContent = "RAM " + human(p.ram);
+  const changed = app.catalog.features.filter((f) => usable(f) && isOn(f) !== !!f.on_by_default).length;
+  const onCount = app.catalog.features.filter((f) => usable(f) && isOn(f)).length;
+  $("countline").textContent = onCount + " features on, " + changed + " changed from what you run";
+  const btn = $("build");
+  const fits = p.flash <= reg;
+  btn.disabled = !fits;
+  $("build-note").textContent = fits ? "" : "This selection is " + human(p.flash - reg) +
+    " over the region - switch something off before building.";
 }
 
 async function update() {
-  const gen = ++state.gen;
-  const sel = selection();
-  el("changed").textContent = String(sel.on.length + sel.off.length);
-  const line = "machine=" + sel.machine + ";off=" + sel.off.join(",") + ";mesh=" + sel.mesh +
-    (sel.on.length ? ";on=" + sel.on.join(",") : "");
-  const tag = "build-" + (await sha256Hex(line)).slice(0, 12);
-  el("hash").textContent = tag;
+  const { sel, tag } = await currentTag();
+  app.tag = tag;
+  const meta = await fetchRelease(tag);
+  if (meta) { showResult(meta); $("build-note").textContent = "This exact selection is already published - download below."; }
+  else { $("result").hidden = true; $("build-note").textContent = $("build").disabled ? $("build-note").textContent : ""; }
+}
 
-  const status = el("status");
-  status.className = "status";
-  status.textContent = "checking whether this exact image already exists ...";
-  el("download").hidden = true;
-  el("request").hidden = true;
+async function fetchRelease(tag) {
+  try {
+    const res = await fetch("https://api.github.com/repos/" + REPO + "/releases/tags/" + tag,
+      { headers: { accept: "application/vnd.github+json" } });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const assets = {};
+    for (const asset of data.assets || []) assets[asset.name] = asset;
+    return { tag: tag, published: (data.published_at || "").slice(0, 10), assets: assets };
+  } catch (error) { return null; }
+}
+
+async function showResult(meta) {
+  const bin = meta.assets["firmware.bin"];
+  const manifest = meta.assets["meta.json"];
+  const log = meta.assets["build.log"];
+  const bundle = meta.assets["firmware-bundle.zip"];
+  $("result").hidden = false;
+  $("r-size").textContent = bin ? human(bin.size) : "-";
+  const p = predicted();
+  $("r-pred").textContent = human(p.flash);
+  $("r-free").textContent = human(Math.max(0, region() - p.flash));
+  $("r-ram").textContent = human(p.ram);
+  $("r-mesh").textContent = app.mesh + " x " + app.mesh;
+  const sel = selection();
+  $("r-sel").textContent = (sel.off.length ? "off: " + sel.off.join(", ") : "") +
+    (sel.on.length ? (sel.off.length ? " · " : "") + "on: " + sel.on.join(", ") : "") ||
+    "nothing changed from what you run";
+  $("r-sha").textContent = bin ? "in the manifest" : "-";
+  const link = (el, asset, fallbackName) => {
+    if (asset) { el.href = asset.browser_download_url; el.hidden = false; }
+    else if (fallbackName) { el.href = "https://github.com/" + REPO + "/releases/download/" + meta.tag + "/" + fallbackName; el.hidden = false; }
+    else el.hidden = true;
+  };
+  link($("download"), bin, "firmware.bin");
+  link($("manifest"), manifest, "meta.json");
+  link($("loglink"), log, "build.log");
+  link($("bundle"), bundle, null);
+}
+
+async function dispatchWithToken(token, sel) {
+  const res = await fetch("https://api.github.com/repos/" + REPO + "/actions/workflows/configurator.yml/dispatches", {
+    method: "POST",
+    headers: { authorization: "Bearer " + token, accept: "application/vnd.github+json" },
+    body: JSON.stringify({ ref: "main", inputs: {
+      machine: sel.machine,
+      disable: sel.off.join(","),
+      enable: sel.on.join(","),
+      mesh: String(sel.mesh),
+    } }),
+  });
+  if (!res.ok) throw new Error("GitHub " + res.status + ": " + (await res.text()).slice(0, 120));
+  return res;
+}
+
+async function startBuild() {
+  const { sel, tag } = await currentTag();
+  if ($("build").disabled) return;
+  const token = localStorage.getItem("e3s1-token");
+  $("status").hidden = false;
+  $("phase").textContent = "queued";
+  $("phase").className = "mono warn";
+  $("jobid").textContent = tag;
+  $("log").hidden = true;
+  $("run-link").hidden = true;
+
+  if (token) {
+    try {
+      await dispatchWithToken(token, sel);
+      $("phase").textContent = "queued on GitHub";
+      $("build-note").textContent = "The workflow is running; this panel will show the files when it publishes them.";
+      pollFor(tag);
+      return;
+    } catch (error) {
+      $("build-note").textContent = "Direct dispatch failed (" + error.message + "), falling back to a request.";
+    }
+  }
 
   const payload = JSON.stringify({ machine: sel.machine, on: sel.on, off: sel.off, mesh: sel.mesh }, null, 2);
   const body = ["Requesting a firmware build from the factory page.", "", FENCE + "json", payload, FENCE,
     "", "The workflow builds this selection and replies with the download link."].join("\n");
-  const issueUrl = "https://github.com/" + REPO + "/issues/new?title=" +
+  const url = "https://github.com/" + REPO + "/issues/new?title=" +
     encodeURIComponent("build: " + tag.slice(6)) + "&body=" + encodeURIComponent(body);
+  window.open(url, "_blank", "noopener");
+  $("phase").textContent = "waiting for the request";
+  $("build-note").textContent = "Finish the GitHub request in the new tab; this panel updates by itself when the image is published.";
+  pollFor(tag);
+}
 
-  try {
-    const res = await fetch("https://api.github.com/repos/" + REPO + "/releases/tags/" + tag,
-      { headers: { accept: "application/vnd.github+json" } });
-    if (gen !== state.gen) return;
-    if (res.ok) {
-      const release = await res.json();
-      const asset = (release.assets || []).find((a) => a.name === "firmware.bin");
-      if (asset) {
-        status.className = "status ok";
-        status.textContent = "already built - published " + asset.created_at.slice(0, 10) + " (" +
-          fmt(asset.size) + " B · " + mb(asset.size) + ").";
-        el("download").href = asset.browser_download_url;
-        el("download").hidden = false;
-        return;
-      }
-    }
-    const region = (state.catalog.machines.find((m) => m.supported) || {}).flash_region || 233472;
-    const overBy = predicted().flash - region;
-    if (overBy > 0) {
-      status.className = "status bad";
-      status.textContent = "this selection is " + fmt(overBy) + " B (" + mb(overBy) +
-        ") over the " + fmt(region) + " B region - switch something off before requesting it.";
-      el("request").hidden = true;
+function pollFor(tag) {
+  clearInterval(app.poll);
+  let tries = 0;
+  app.poll = setInterval(async () => {
+    tries += 1;
+    const meta = await fetchRelease(tag);
+    if (meta) {
+      clearInterval(app.poll);
+      $("phase").textContent = "published";
+      $("phase").className = "mono ok";
+      await showResult(meta);
+      $("build-note").textContent = "Built and published " + meta.published + ".";
       return;
     }
-    status.className = "status warn";
-    status.textContent = "not built yet. A request opens a GitHub issue; the workflow builds it and replies there.";
-    el("request").href = issueUrl;
-    el("request").hidden = false;
-  } catch (error) {
-    if (gen !== state.gen) return;
-    status.className = "status bad";
-    status.textContent = "could not reach GitHub to check: " + error.message;
-    el("request").href = issueUrl;
-    el("request").hidden = false;
-  }
+    $("phase").textContent = "building (" + Math.round(tries * 8) + " s)";
+    if (tries > 75) { clearInterval(app.poll); $("phase").textContent = "still not published"; $("phase").className = "mono bad"; }
+  }, 8000);
 }
 
 function applyPreset(name) {
-  for (const b of document.querySelectorAll(".preset")) b.classList.toggle("active", b.dataset.preset === name);
-  state.on.clear(); state.off.clear();
+  document.querySelectorAll(".preset").forEach((b) => b.classList.toggle("active", b.dataset.preset === name));
+  app.on.clear(); app.off.clear();
   if (name === "min") {
-    for (const f of state.catalog.features) if (usable(f)) setFeature(f.id, false);
-  } else if (name === "now") {
-    // defaults
+    app.catalog.features.forEach((f) => { if (usable(f)) setFeature(f.id, false); });
   } else if (name === "fit") {
-    const region = (state.catalog.machines.find((m) => m.supported) || {}).flash_region || 233472;
-    const candidates = state.catalog.features.filter((f) => usable(f) && !isOn(f) && priced(f))
+    const candidates = app.catalog.features.filter((f) => usable(f) && !isOn(f) && priced(f))
       .sort((a, b) => a.flash - b.flash);
     for (const f of candidates) {
       if ((f.conflicts || []).some((other) => {
-        const target = state.catalog.features.find((x) => x.id === other);
-        return target && isOn(target);
+        const t = app.catalog.features.find((x) => x.id === other);
+        return t && isOn(t);
       })) continue;
       setFeature(f.id, true);
-      if (predicted().flash > region) setFeature(f.id, false);
+      if (predicted().flash > region()) setFeature(f.id, false);
     }
   }
-  render(); renderBudget(); update();
+  render(); renderBudget();
+  update();
 }
 
 document.querySelectorAll(".preset").forEach((b) => { b.onclick = () => applyPreset(b.dataset.preset); });
-el("filter").oninput = (event) => { state.filter = event.target.value; render(); };
+$("filter").oninput = (event) => { app.filter = event.target.value; render(); };
+$("build").onclick = startBuild;
+$("save-token").onclick = () => {
+  const value = $("token").value.trim();
+  if (!value) { localStorage.removeItem("e3s1-token"); $("build-note").textContent = "Token cleared."; return; }
+  localStorage.setItem("e3s1-token", value);
+  $("token").value = "";
+  $("build-note").textContent = "Token saved in this browser; Build now dispatches directly.";
+};
 loadCatalog();
 </script>
 </body>

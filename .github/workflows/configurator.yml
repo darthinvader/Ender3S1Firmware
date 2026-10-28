@@ -135,6 +135,7 @@ jobs:
           HASH=$(printf '%s' "$sel" | sha256sum | cut -c1-12)
           TAG="build-$HASH"
           URL="https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/firmware.bin"
+          ( cd build/configurator && zip -q -9 firmware-bundle.zip firmware.bin meta.json build.log )
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "this selection is already published as $TAG" | tee -a "$GITHUB_STEP_SUMMARY"
           else
@@ -142,6 +143,7 @@ jobs:
               build/configurator/firmware.bin \
               build/configurator/meta.json \
               build/configurator/build.log \
+              build/configurator/firmware-bundle.zip \
               --title "Build $HASH - $MACHINE" \
               --notes "Selection: $sel
           Built by workflow run $RUN_ID from commit $SHA.
