@@ -637,13 +637,6 @@ function applyPreset(name) {
 document.querySelectorAll(".preset").forEach((b) => { b.onclick = () => applyPreset(b.dataset.preset); });
 $("filter").oninput = (event) => { app.filter = event.target.value; render(); };
 $("build").onclick = startBuild;
-$("save-token").onclick = () => {
-  const value = $("token").value.trim();
-  if (!value) { localStorage.removeItem("e3s1-token"); $("build-note").textContent = "Token cleared."; return; }
-  localStorage.setItem("e3s1-token", value);
-  $("token").value = "";
-  $("build-note").textContent = "Token saved in this browser; Build now dispatches directly.";
-};
 async function findBackend() {
   try {
     const res = await fetch("backend.json?t=" + Date.now(), { cache: "no-store" });
