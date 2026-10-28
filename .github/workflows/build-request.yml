@@ -175,6 +175,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           NUMBER: ${{ github.event.issue.number }}
+          UNKNOWN: ${{ needs.validate.outputs.unknown }}
         run: |
           if [ -n "$UNKNOWN" ]; then
             printf 'This request names feature ids that are not in the catalogue: %s\n\n' "$UNKNOWN" > /tmp/comment.md
