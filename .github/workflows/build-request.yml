@@ -21,6 +21,7 @@ jobs:
       ok: ${{ steps.parse.outputs.ok }}
       machine: ${{ steps.parse.outputs.machine }}
       disable: ${{ steps.parse.outputs.disable }}
+      enable: ${{ steps.parse.outputs.enable }}
       mesh: ${{ steps.parse.outputs.mesh }}
       hash: ${{ steps.parse.outputs.hash }}
     steps:
@@ -33,7 +34,7 @@ jobs:
           import hashlib, json, os, sys
           body = os.environ.get("ISSUE_BODY") or ""
           ok = "false"
-          machine = disable = mesh = hash12 = ""
+          machine = disable = enable = mesh = hash12 = ""
           start = body.find("{", body.find("json"))
           end = body.rfind("}")
           if start != -1 and end > start:
@@ -41,26 +42,34 @@ jobs:
                   sel = json.loads(body[start:end + 1])
                   machine = str(sel.get("machine", "ender3s1-f103"))
                   off = sel.get("off") or []
+                  on = sel.get("on") or []
                   step = sel.get("mesh")
                   good = (
                       machine == "ender3s1-f103"
                       and isinstance(off, list) and len(off) <= 120
                       and all(isinstance(x, str) and x.replace("_", "").isalnum()
                               and 2 <= len(x) <= 48 for x in off)
+                      and isinstance(on, list) and len(on) <= 120
+                      and all(isinstance(x, str) and x.replace("_", "").isalnum()
+                              and 2 <= len(x) <= 48 for x in on)
                       and step in [None, "", 3, 5, 7, 9]
                   )
                   if good:
                       off = sorted(set(off))
+                      on = sorted(set(on))
                       disable = ",".join(off)
+                      enable = ",".join(on)
                       mesh = "" if step in (None, "") else str(step)
                       line = "machine=%s;off=%s;mesh=%s" % (machine, disable, mesh)
+                      if enable:
+                          line += ";on=" + enable
                       hash12 = hashlib.sha256(line.encode()).hexdigest()[:12]
                       ok = "true"
               except Exception as exc:
                   print("parse failed:", exc, file=sys.stderr)
           with open(os.environ["GITHUB_OUTPUT"], "a") as out:
               for key, value in (("ok", ok), ("machine", machine), ("disable", disable),
-                                 ("mesh", mesh), ("hash", hash12)):
+                                 ("enable", enable), ("mesh", mesh), ("hash", hash12)):
                   out.write(key + "=" + value + "\n")
           print("accepted" if ok == "true" else "rejected", machine, disable, mesh, hash12)
           PY
@@ -75,6 +84,7 @@ jobs:
     with:
       machine: ${{ needs.validate.outputs.machine }}
       disable: ${{ needs.validate.outputs.disable }}
+      enable: ${{ needs.validate.outputs.enable }}
       mesh: ${{ needs.validate.outputs.mesh }}
 
   answer:
@@ -94,6 +104,7 @@ jobs:
           HASH: ${{ needs.validate.outputs.hash }}
           SEL_MACHINE: ${{ needs.validate.outputs.machine }}
           SEL_DISABLE: ${{ needs.validate.outputs.disable }}
+          SEL_ENABLE: ${{ needs.validate.outputs.enable }}
           SEL_MESH: ${{ needs.validate.outputs.mesh }}
           BUILD_RESULT: ${{ needs.build.result }}
         run: |
@@ -113,6 +124,7 @@ jobs:
             printf '| selection | value |\n|---|---|\n'
             printf '| machine | %s |\n' "$SEL_MACHINE"
             printf '| features disabled | %s |\n' "$DISABLE_TEXT"
+            printf '| features enabled | %s |\n' "$ENABLE_TEXT"
             printf '| mesh default | %s |\n' "$MESH_TEXT"
             printf '\nThe image was verified with check-vector-table before it was published.\n'
           } > /tmp/comment.md
