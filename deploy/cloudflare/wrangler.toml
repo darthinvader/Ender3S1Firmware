@@ -1,0 +1,23 @@
+name = "ender3s1-build-broker"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+# Free plan only: 100k requests/day, then it stops instead of billing.
+# Create the namespace once:  wrangler kv namespace create RL
+[[kv_namespaces]]
+binding = "RL"
+id = "REPLACE_WITH_NAMESPACE_ID"
+
+[vars]
+REPO = "darthinvader/Ender3S1Firmware"
+ALLOWED_ORIGIN = "https://darthinvader.github.io"
+MAX_PER_IP_HOUR = "3"
+MAX_PER_DAY = "20"
+
+# The token is a secret, never a var:
+#   wrangler secret put GH_TOKEN
+# fine-grained PAT, this repository only:
+#   Actions: read and write     (dispatch a workflow, read its status)
+#   Contents: read              (nothing else)
+# Nothing else is granted, so the worst case is a queued build, not a bill.
+

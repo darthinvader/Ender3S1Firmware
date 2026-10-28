@@ -4,6 +4,34 @@ The frontend is easy - it is a static page. The backend is the hard part: it
 **compiles C code**, so it needs a real machine with a disk, not a serverless
 function.
 
+## Recommended: no server, no bill
+
+Do not run the compiler on a host you pay for. Let **GitHub Actions** do the
+compiling and let the result live as a **release asset** - public repos get
+Actions minutes for free, and a release asset is downloadable by anyone without
+an account.
+
+- The site (Pages, free) posts a selection to a small **Cloudflare Worker**
+  (free plan, hard request cap, no card on file).
+- The Worker validates the selection, allows **3 builds per IP per hour** and
+  **20 per day**, hashes it, and **returns the existing file if that exact
+  selection was built before** - repeat requests cost nothing.
+- A new selection dispatches @BT@configurator.yml@BT@, which compiles, verifies the ARM
+  vector table, and publishes @BT@build-<hash>@BT@ as a release with the image, the
+  manifest and the build log.
+- The Worker answers @BT@GET /api/build/<hash>@BT@ by checking that deterministic tag.
+
+What a spammer can achieve: a queued job, until the daily counter stops them.
+What they cannot achieve: a bill, because neither Workers nor public Actions
+minutes are metered against a payment method.
+
+**Proven end to end, not sketched:** a dispatch with @BT@off=arc_support, mesh=7@BT@
+produced release @BT@build-e93da78f5654@BT@; the image downloads anonymously at
+229,956 bytes (HTTP 200, no cookies, no token), and its manifest predicts 229,352 B
+flash with 4,120 B free. The Worker's tag rule was cross-checked against the
+workflow on three selections and matches byte for byte; its pure logic passes 11
+tests. Setup and code: [deploy/cloudflare/README.md](../deploy/cloudflare/README.md).
+
 ## What the backend actually needs (measured on this machine)
 
 | Resource | Measured |
@@ -26,7 +54,7 @@ on a Linux x86_64 **or arm64** host - PlatformIO ships both `linux_x86_64` and
 | **Your own machine + Cloudflare Tunnel** | yes, you own it | yes | the machine must stay on; you are the sysadmin |
 | **Oracle Cloud Always Free** (Ampere ARM: 4 OCPU / 24 GB / 200 GB) | yes, "always free" tier | yes | card for signup; idle instances can be reclaimed; region capacity is flaky |
 | **Oracle Cloud Always Free** (AMD micro: 1 GB RAM) | yes | tight - 462 MB per build, 1 GB total | slow, one build at a time |
-| **GitHub Actions as the builder** | yes for public repos | yes, but not as a server | no live log, artifacts expire after 90 days, 20-60 s queue; needs a token-holding broker for public use |
+| **GitHub Actions as the builder** - *recommended* | yes for public repos | yes, but not as a server | no live log, 20-60 s queue; publish as a release so downloads need no account; a free Worker broker is included here |
 | Google Cloud free `e2-micro` | yes | marginal (1 GB RAM, 30 GB disk) | card required; slow |
 | Vercel / Netlify / Cloudflare Workers | yes | **no** | cannot run a compiler at all |
 | Render / Railway / Koyeb / Fly.io free | no | no | sleep on idle, ephemeral disk, or trial credits |
