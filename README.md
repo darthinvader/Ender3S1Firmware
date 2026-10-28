@@ -6,6 +6,8 @@
 [![flash](https://img.shields.io/badge/flash-99.5%25%20of%20228%20KiB-red)](docs/DESIGN-NOTES.md)
 [![license](https://img.shields.io/badge/license-GPL--3.0-lightgrey)](LICENSE)
 [![verify](https://github.com/darthinvader/Ender3S1Firmware/actions/workflows/verify.yml/badge.svg)](https://github.com/darthinvader/Ender3S1Firmware/actions/workflows/verify.yml)
+[![rebuild](https://github.com/darthinvader/Ender3S1Firmware/actions/workflows/build.yml/badge.svg)](https://github.com/darthinvader/Ender3S1Firmware/actions/workflows/build.yml)
+[![configurator](https://github.com/darthinvader/Ender3S1Firmware/actions/workflows/configurator.yml/badge.svg)](https://github.com/darthinvader/Ender3S1Firmware/actions/workflows/configurator.yml)
 
 Custom Marlin firmware for a Creality **Ender 3 S1**: unified bed leveling with a 7x7 mesh, input shaping, linear advance, predictive temperature control and cable flashing - on a 256 KiB STM32F103 with a 28 KiB bootloader eating a tenth of it.
 

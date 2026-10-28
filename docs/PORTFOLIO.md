@@ -91,6 +91,10 @@ actually is.
 
 - `make verify` - checksums, ARM vector tables, configuration assertions, link
   check, and 14 live checks against the configurator service.
+- GitHub Actions: **verify** on every push (green), a **weekly full rebuild from the
+  pinned upstream** (green, about two minutes), and a **configurator workflow**
+  that bootstraps, applies a feature selection and compiles it with no local
+  machine involved (green).
 - `./scripts/configurator.sh` - the whole build chain, one command.
 - Committed binaries in [firmware/](../firmware) and [screen/](../screen) with
   their manifests and MD5s.
