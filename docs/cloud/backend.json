@@ -1,1 +1,4 @@
-{}
+{
+  "pages": "https://ender3s1-firmware.pages.dev/cloud/",
+  "note": "the builder runs as a Pages Function next to the site; this file is only a pointer for the GitHub Pages mirror"
+}

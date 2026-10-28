@@ -735,8 +735,15 @@ async function boot() {
       : "Builder online: this server compiles the selection and hands back the files in seconds.";
   } else {
     state.className = "hint warn";
+    let mirror = "";
+    try {
+      const config = await (await fetch("backend.json?t=" + Date.now(), { cache: "no-store" })).json();
+      if (config && config.pages && location.hostname.endsWith("github.io")) {
+        mirror = " The live build page is at " + config.pages + " - this copy is a mirror.";
+      }
+    } catch (error) { /* no pointer */ }
     state.textContent = "Public builder offline right now. Downloads of already published images still work; " +
-      "a new build needs the machine that serves it, or a GitHub request from the maintenance page.";
+      "a new build needs the machine that serves it, or a GitHub request from the maintenance page." + mirror;
     $("build").disabled = true;
     $("build-note").textContent = "The builder is offline; pick a published image below or come back later.";
   }
