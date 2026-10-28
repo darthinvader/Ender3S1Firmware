@@ -104,6 +104,8 @@ def main(argv) -> int:
                     help="skip defines this firmware version does not have instead of failing")
     ap.add_argument("--no-predict", action="store_true",
                     help="the costs were measured on the pinned tree, so do not claim a prediction")
+    ap.add_argument("--mesh", type=int, default=None,
+                    help="default bed mesh size per axis; the bounds come from the catalogue's mesh section")
     ap.add_argument("--source-label", default="pinned",
                     help="which firmware version this build is from, recorded in the manifest")
     args = ap.parse_args(argv[1:])
@@ -263,6 +265,26 @@ def main(argv) -> int:
 
     patch_result = apply_patch(tree, Path(args.patch), "ICON_ShapingZ")
 
+    # 5b. default bed mesh size (the probed size itself stays a screen setting)
+    mesh_info = None
+    if args.mesh is not None:
+        catalog_full = json.loads(Path(args.catalog).read_text())
+        spec = catalog_full.get("mesh") or {}
+        lo = int(spec.get("min", 3))
+        hi = int(spec.get("max", 5))
+        if not (lo <= args.mesh <= hi):
+            die("mesh size %d is outside %d..%d. %s"
+                % (args.mesh, lo, hi, spec.get("matrix_note", "")))
+        hits = set_define(marlin / "Configuration.h", spec.get("define", "GRID_MAX_POINTS_X"),
+                          True, str(args.mesh))
+        mesh_info = {
+            "size": args.mesh,
+            "define": spec.get("define", "GRID_MAX_POINTS_X"),
+            "definitions_rewritten": hits,
+            "matrix_limit": spec.get("library_limit"),
+            "note": "default size for a fresh EEPROM; the probed size is chosen on the screen",
+        }
+
     # 6. manifest
     meta = {
         "machine": machine_id,
@@ -281,6 +303,7 @@ def main(argv) -> int:
         "auto_removed": auto_removed,
         "source": args.source_label,
         "skipped": skipped,
+        "mesh": mesh_info,
     }
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)

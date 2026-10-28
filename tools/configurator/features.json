@@ -50,6 +50,45 @@
     "Screen and UI",
     "Diagnostics"
   ],
+  "mesh": {
+    "define": "GRID_MAX_POINTS_X",
+    "file": "Configuration.h",
+    "min": 3,
+    "max": 9,
+    "library_limit": 9,
+    "default": 7,
+    "presets": [
+      3,
+      5,
+      7,
+      9
+    ],
+    "matrix_note": "The runtime matrix is a fixed 9x9 float array (GRID_LIMIT in mriscoc's prouiex/proui_ex.h, matching their precompiled ProUI library), so every size from 3 to 9 costs the same RAM. 10 or more cannot link: the prebuilt library is compiled for float[9][9].",
+    "measured": [
+      {
+        "n": 3,
+        "flash": 0,
+        "ram": 0
+      },
+      {
+        "n": 5,
+        "flash": 0,
+        "ram": 0
+      },
+      {
+        "n": 7,
+        "flash": 0,
+        "ram": 0
+      },
+      {
+        "n": 9,
+        "flash": 0,
+        "ram": 0
+      }
+    ],
+    "measured_on": "2026-10-28",
+    "measured_against": "pinned tree, full build, flash and RAM identical at 232,312 / 28,064 bytes for every preset"
+  },
   "features": [
     {
       "id": "adaptive_step_smoothing",

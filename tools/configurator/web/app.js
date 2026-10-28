@@ -9,6 +9,7 @@ const app = {
   collapsed: {},
   showUnavailable: false,
   devices: [],
+  mesh: null,
   versions: null,
   sourceId: "pinned",
   sourceInspect: null,
@@ -35,6 +36,47 @@ function toast(message, kind) {
   else { el.style.background = '#2a1414'; el.style.borderColor = 'var(--bad)'; el.style.color = '#ffd9d6'; }
   clearTimeout(toast._t);
   toast._t = setTimeout(() => el.classList.add('hidden'), 5000);
+}
+
+// ---------------------------------------------------------------- mesh size
+function meshSpec() {
+  return (app.catalog && app.catalog.mesh) || { min: 3, max: 9, default: 7, presets: [3, 5, 7, 9] };
+}
+function meshSize() {
+  return Number(app.mesh || meshSpec().default);
+}
+function renderMesh() {
+  const spec = meshSpec();
+  const sel = $("mesh");
+  if (!sel) return;
+  const keep = meshSize();
+  sel.innerHTML = "";
+  for (const n of (spec.presets || [7])) {
+    const o = document.createElement("option");
+    o.value = String(n);
+    o.textContent = n + " x " + n + " (" + n * n + " points)" + (n === spec.default ? " - what this build uses" : "");
+    sel.appendChild(o);
+  }
+  sel.value = String(keep);
+  sel.onchange = () => {
+    app.mesh = Number(sel.value);
+    renderMeshNote();
+    renderBudget();
+  };
+  renderMeshNote();
+}
+function renderMeshNote() {
+  const spec = meshSpec();
+  const n = meshSize();
+  const notes = {
+    3: "Nine probed points: quickest, only suits a plate that is already flat.",
+    5: "Marlin's own default; twenty-five points.",
+    7: "Forty-nine points - the spacing this machine was calibrated with.",
+    9: "Eighty-one points, the ceiling: mriscoc's ProUI library is compiled for a 9x9 matrix."
+  };
+  $("mesh-note").textContent = (notes[n] || (n * n + " probed points.")) +
+    " This is the default a fresh EEPROM uses; on the printer, Mesh Leveling > Mesh Points sets 3.." +
+    (spec.library_limit || spec.max) + " at runtime and M500 saves it. The 9x9 matrix is allocated either way, so the size itself is free.";
 }
 
 // ------------------------------------------------------------- firmware source
@@ -172,7 +214,7 @@ function signature() {
   const on = [];
   for (const f of app.catalog.features) if (app.state[f.id]) on.push(f.id);
   // the screen package is copied onto the card, not compiled: it is deliberately not part of this
-  return [machine(), app.sourceId, on.join(',')].join('|');
+  return [machine(), app.sourceId, String(meshSize()), on.join(',')].join('|');
 }
 function buildFresh() { return !!app.build && app.build.signature === signature(); }
 
@@ -572,7 +614,7 @@ async function startBuild() {
   $('status').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 
   const payload = { machine: machine(), on: [], off: [], allow_overflow: allowOverflow,
-    source: app.sourceId,
+    source: app.sourceId, mesh: meshSize(),
     screen_os: $('screen-os').value, screen_assets: $('screen-assets').value };
   for (const f of app.catalog.features) (app.state[f.id] ? payload.on : payload.off).push(f.id);
 
@@ -639,6 +681,8 @@ function showResult(j) {
   $('r-flash').textContent = fmt(r.flash_used) + ' / ' + fmt(r.flash_region) + ' B (' + r.flash_percent + '%)';
   const diff = r.flash_used - runningFlash();
   $('r-delta').textContent = diff === 0 ? 'same size' : (diff < 0 ? fmt(-diff) + ' B smaller' : fmt(diff) + ' B larger');
+  const meshEl = $('r-mesh');
+  if (meshEl) meshEl.textContent = j.mesh ? (j.mesh + ' x ' + j.mesh) : 'default';
   if (j.predicted && j.predicted.flash !== null && j.predicted.flash !== undefined) {
     $('r-pred').textContent = fmt(j.predicted.flash) + ' B';
     const err = r.flash_used - j.predicted.flash;
@@ -821,6 +865,7 @@ async function boot() {
     $('banner').classList.remove('hidden');
     $('banner').textContent = 'Build tree not ready: ' + app.catalog.build.hint;
   }
+  renderMesh();
   await loadVersions(false);
   await loadDevices();
 }

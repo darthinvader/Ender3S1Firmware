@@ -166,6 +166,8 @@ def build_job(job):
         apply_cmd.append("--tolerant")
     if not measured:
         apply_cmd.append("--no-predict")
+    if job.get("mesh"):
+        apply_cmd += ["--mesh", str(job["mesh"])]
     rc = run_streaming(job, apply_cmd, ROOT)
     if rc != 0:
         with lock:
@@ -254,6 +256,8 @@ def build_job(job):
         "machine_name": predicted.get("machine_name_stamped"),
         "upstream": predicted.get("upstream"),
         "changed": predicted.get("changed"),
+        "mesh": predicted.get("mesh") or ({"size": job.get("mesh")} if job.get("mesh") else None),
+        "skipped": predicted.get("skipped", []),
         "auto_added": predicted.get("auto_added", []),
         "auto_removed": predicted.get("auto_removed", []),
         "screen": {
@@ -445,7 +449,7 @@ class Handler(BaseHTTPRequestHandler):
                         ("id", "status", "phase", "machine", "created", "finished",
                          "predicted", "result", "error", "manifest", "diff", "warnings",
                          "screen_os", "screen_assets", "kind", "device", "parts",
-                         "source", "source_label")}
+                         "source", "source_label", "mesh")}
                 view["on"] = job.get("on", [])
                 view["off"] = job.get("off", [])
                 view["log"] = job["log"][-60:]
@@ -648,6 +652,20 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"error": "%s is documented but not shipped (too large for the panel partition)"
                                         % assets_entry["label"]}, 400)
 
+        mesh = body.get("mesh")
+        if mesh is not None:
+            spec = catalog.get("mesh") or {}
+            lo, hi = int(spec.get("min", 3)), int(spec.get("max", 5))
+            try:
+                mesh = int(mesh)
+            except (TypeError, ValueError):
+                return self._json({"error": "mesh must be a number"}, 400)
+            if not (lo <= mesh <= hi):
+                return self._json({
+                    "error": ("%d is outside the mesh sizes this firmware can build (%d..%d). %s"
+                              % (mesh, lo, hi, spec.get("matrix_note", "")))
+                }, 400)
+
         if len(work.queue) > 3:
             return self._json({"error": "queue full, try again shortly"}, 429)
 
@@ -655,6 +673,7 @@ class Handler(BaseHTTPRequestHandler):
         job = {"id": jid, "kind": "build", "status": "queued", "phase": "queued", "machine": machine,
                "on": on, "off": off, "screen_os": os_id, "screen_assets": assets_id,
                "allow_overflow": bool(body.get("allow_overflow")),
+               "mesh": mesh,
                "source": body.get("source") or "pinned",
                "created": now(), "log": [], "predicted": None, "result": None}
         with lock:

@@ -192,3 +192,7 @@ footer p { margin: 0; }
 .deflist li { margin-bottom: 2px; }
 .deflist code { color: var(--ink); }
 details summary { cursor: pointer; }
+
+.meshrow { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.meshrow label { flex: 0 0 auto; }
+.meshrow select { flex: 1 1 auto; }

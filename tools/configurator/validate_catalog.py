@@ -85,6 +85,28 @@ def main() -> int:
         if macros != {"MULTIPLE_PROBING", "EXTRA_PROBING"}:
             problems.append("probing_avg must flip MULTIPLE_PROBING and EXTRA_PROBING together")
 
+    mesh = cat.get("mesh") or {}
+    if mesh:
+        lo, hi = int(mesh.get("min", 0)), int(mesh.get("max", 0))
+        default = int(mesh.get("default", 0))
+        limit = int(mesh.get("library_limit", hi))
+        if not (lo <= default <= hi):
+            problems.append("mesh default %d is outside %d..%d" % (default, lo, hi))
+        presets = [int(x) for x in mesh.get("presets", [])]
+        if not presets:
+            problems.append("mesh presets are empty")
+        for n in presets:
+            if not (lo <= n <= hi):
+                problems.append("mesh preset %d is outside %d..%d" % (n, lo, hi))
+        if hi > limit:
+            problems.append("mesh max %d exceeds the library limit %d" % (hi, limit))
+        measured_mesh = {int(m["n"]) for m in mesh.get("measured", [])}
+        for n in presets:
+            if n not in measured_mesh:
+                problems.append("mesh preset %d has no measurement" % n)
+        if mesh.get("define") not in definitions(CFG / "Configuration.h"):
+            problems.append("mesh define %r is not in Configuration.h" % mesh.get("define"))
+
     print("catalogue: %d features, %d groups" % (len(cat["features"]), len(cat["groups"])))
     measured = sum(1 for f in cat["features"] if f.get("cost_source") == "measured")
     print("costs measured: %d, unmeasured: %d" % (measured, len(cat["features"]) - measured))

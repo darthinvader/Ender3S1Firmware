@@ -143,6 +143,8 @@ It also writes the card. Pick the device from the ones the machine actually has,
 
 And it will not stop you from building an image that cannot fit. Over the region the button turns red and says by how many bytes, a line under it explains the consequence, and a modal asks before anything runs - because your board may have more flash than the preset assumes, or you may be measuring what a configuration would need. The linker is the authority.
 
+The bed mesh is a first-class control too: the page picks the **default** size (3x3, 5x5, 7x7, 9x9) and says plainly that the firmware then lets you probe any size from 3 to 9 in *Mesh Leveling > Mesh Points*, saved with `M500`. All four cost the same, because the matrix is a fixed 9x9; ten or more cannot link against mriscoc's precompiled ProUI library, so the page refuses it with that reason.
+
 Dependencies are enforced in both directions: asking for the screen's linear-advance tuning item switches linear advance back on (`auto_added` in the manifest), turning linear advance off removes the screen item, and mutually exclusive pairs are refused before a compiler starts.
 
 Every cost is measured, not estimated: each feature was compiled, on-features by turning them off against the shipped build, off-features against a slimmed baseline with room to grow. `tools/configurator/measure.py` runs the loop, `merge_measurements.py` writes the numbers back, and the catalogue validation in `make verify` proves every define still exists exactly once. Details: [tools/configurator/README.md](tools/configurator/README.md).

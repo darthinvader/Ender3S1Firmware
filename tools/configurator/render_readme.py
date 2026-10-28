@@ -116,6 +116,23 @@ Two details make older trees usable rather than fatal:
 * **Tolerant application.** A catalogue option that a tree does not contain is skipped and listed in the manifest under @BT@skipped@BT@, instead of failing the compile - so this configuration still builds on a 2024 tree that predates a define.
 * **What is new.** Before you build, the page compares the version's @BT@Configuration.h@BT@ and @BT@Configuration_adv.h@BT@ with the pinned release's (fetched from the same commit, not from the working tree) and lists the options the version has that the pinned one does not.
 
+## Mesh size
+
+The bed mesh is a **runtime** setting on this firmware, not a build-time one: mriscoc's ProUI keeps a fixed 9x9 float matrix (`GRID_LIMIT` in `prouiex/proui_ex.h`, matching their precompiled library) and probes any size from 3 to 9, chosen in *Mesh Leveling > Mesh Points* and saved with `M500`. What the build sets is the **default** a fresh EEPROM starts with (`GRID_MAX_POINTS_X`, which becomes `DEF_GRID_MAX_POINTS_X`).
+
+| Preset | Probing points | What it is |
+|---|---|---|
+| **3x3** | 9 | fastest; only for a plate that is already flat |
+| **5x5** | 25 | Marlin's own default |
+| **7x7** | 49 | the spacing this machine was calibrated with |
+| **9x9** | 81 | the ceiling |
+
+Measured, not assumed: all four compile to the same 232,312 B flash and 28,064 B RAM, because the matrix is 9x9 whatever the default is. The binaries differ (the default lands in the settings block), so the setting is real, but it costs nothing.
+
+![Mesh size selector](../../docs/img/configurator-mesh.png)
+
+Ten or more is not offered, and not because of a missing option: the ProUI library ships precompiled for `float[9][9]`, so a larger `GRID_LIMIT` fails at link time with an undefined reference to `set_store_from_mesh(float const (&)[9][9], ...)`. The page refuses 10..15 with that reason instead of pretending.
+
 ## What a build gives you
 
 | Artifact | What it is |

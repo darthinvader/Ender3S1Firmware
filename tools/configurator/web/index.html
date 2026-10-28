@@ -50,13 +50,18 @@
       </div>
     </section>
 
-    <section class="card">
+    <section class="card" id="build-card">
       <h2>Build</h2>
       <div class="presets">
         <button id="preset-now" class="preset active" data-preset="now">What I run now</button>
         <button id="preset-min" class="preset" data-preset="min">Minimum</button>
         <button id="preset-fit" class="preset" data-preset="fit">Add what fits</button>
       </div>
+      <div class="meshrow">
+        <label class="hint" for="mesh">Mesh size</label>
+        <select id="mesh"></select>
+      </div>
+      <p id="mesh-note" class="hint"></p>
       <div class="budget">
         <div class="budget-head"><span>Predicted flash</span><span id="predicted" class="mono">-</span></div>
         <div id="bar" class="bar"><div id="bar-used" class="bar-used"></div><div id="bar-over" class="bar-over"></div></div>
@@ -108,6 +113,7 @@
         <tr><th>Predicted</th><td id="r-pred" class="mono"></td></tr>
         <tr><th>Error</th><td id="r-err" class="mono"></td></tr>
         <tr><th>RAM</th><td id="r-ram" class="mono"></td></tr>
+        <tr><th>Mesh</th><td id="r-mesh" class="mono"></td></tr>
         <tr><th>File</th><td id="r-size" class="mono"></td></tr>
         <tr><th>Screen</th><td id="r-screen" class="small"></td></tr>
         <tr><th>Bundle</th><td id="r-bundle" class="small muted"></td></tr>
