@@ -14,7 +14,7 @@ stack that needs **no card and no machine** is already half in this repository:
    builds a selection, verifies the vector table and publishes it as a release
    under a deterministic tag, skipping the compile when that tag already exists.
 2. **A Pages Function** is the trigger. It lives next to this site in
-   [docs/functions/api/build.js](../docs/functions/api/build.js), holds a
+   [functions/api/build.js](../functions/api/build.js), holds a
    repository-scoped token as a Pages secret, and answers
    `POST /api/build` by dispatching the workflow. The same origin means no CORS,
    no tunnel and nothing of yours reachable.
