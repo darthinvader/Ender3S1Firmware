@@ -217,6 +217,20 @@ A firmware repository that says everything works is not telling you anything. Th
 * **ships** machine-specific calibration values as a record, not as a recommendation. Copying `M205 J0.02` or `Z-3.10` to another printer without measuring is guesswork.
 * **treats** the upstream issue workaround in `0002` as a workaround. A future mriscoc release may make it unnecessary.
 
+## Publishing this repository
+
+The repository is local. To put it on GitHub:
+
+```bash
+scripts/publish-to-github.sh
+```
+
+It is idempotent: if the GitHub CLI is authenticated it creates
+darthinvader/Ender3S1Firmware, sets the description and topics, and pushes
+main; if the repository already exists it just pushes. Without either it stops
+and prints the two ways to finish, because creating a repository needs an
+account action this machine cannot perform on its own. It never force-pushes.
+
 ## Documentation
 
 | Document | Contents |
