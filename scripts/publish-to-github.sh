@@ -25,7 +25,13 @@ if command -v gh >/dev/null && gh auth status >/dev/null 2>&1; then
   echo "authenticated as $(gh api user --jq .login)"
   if ! gh repo view "$REPO_SLUG" >/dev/null 2>&1; then
     echo "creating $REPO_SLUG ..."
-    gh repo create "$REPO_SLUG" $VISIBILITY --description "$DESCRIPTION" --source . --remote origin --disable-wiki
+    # --source/--remote only when origin is not already configured: gh refuses to
+    # add a remote that exists, and with set -e that aborted the whole script.
+    if git remote get-url origin >/dev/null 2>&1; then
+      gh repo create "$REPO_SLUG" $VISIBILITY --description "$DESCRIPTION" --disable-wiki
+    else
+      gh repo create "$REPO_SLUG" $VISIBILITY --description "$DESCRIPTION" --source . --remote origin --disable-wiki
+    fi
   else
     echo "$REPO_SLUG already exists"
   fi
