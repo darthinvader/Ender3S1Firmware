@@ -812,7 +812,9 @@ async function boot() {
 }
 
 let cardHandle = null;
-const canWriteFolder = typeof window.showDirectoryPicker === "function";
+// capability detection, with ?nofolder=1 to exercise the fallback on purpose
+const canWriteFolder = typeof window.showDirectoryPicker === "function" &&
+  !location.search.includes("nofolder");
 
 function initCardWriter() {
   if (canWriteFolder) return;
