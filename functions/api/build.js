@@ -34,6 +34,7 @@ export async function onRequestPost({ request, env }) {
 
   if (!env.GH_TOKEN) return json({ error: "the builder has no token configured" }, 500);
 
+
   const dispatched = await fetch(API + "/repos/" + REPO + "/actions/workflows/configurator.yml/dispatches", {
     method: "POST",
     headers: {
@@ -48,6 +49,20 @@ export async function onRequestPost({ request, env }) {
     const text = await dispatched.text();
     return json({ error: "GitHub refused the dispatch: " + dispatched.status + " " + text.slice(0, 160) }, 502);
   }
-  return json({ status: "building", tag: tag }, 202);
+  let runId = null;
+  for (let attempt = 0; attempt < 4 && !runId; attempt += 1) {
+    const runs = await fetch(API + "/repos/" + REPO + "/actions/workflows/configurator.yml/runs?per_page=5", {
+      headers: { authorization: "Bearer " + env.GH_TOKEN, accept: "application/vnd.github+json",
+                 "user-agent": "firmware-factory" },
+    });
+    if (runs.ok) {
+      const list = (await runs.json()).workflow_runs || [];
+      const mine = list.find((r) => Date.now() - Date.parse(r.created_at) < 60 * 1000 &&
+        (r.status === "queued" || r.status === "in_progress"));
+      if (mine) runId = mine.id;
+    }
+    if (!runId) await new Promise((resolve) => setTimeout(resolve, 900));
+  }
+  return json({ status: "building", tag: tag, run: runId }, 202);
 }
 

@@ -140,6 +140,7 @@
       <p class="hint mono" id="ramline"></p>
       <p class="hint" id="countline"></p>
       <button id="build" class="primary">Build firmware</button>
+      <pre id="log" class="log" hidden></pre>
       <p class="hint" id="build-note"></p>
       <p class="hint" id="builder-state">looking for the public builder ...</p>
     </section>
@@ -157,10 +158,21 @@
       </div>
     </section>
 
+    <section class="card" id="write-card">
+      <h2>Write to card</h2>
+      <button id="pick-card" class="ghost small-btn">Choose the SD card</button>
+      <div class="checks">
+        <label class="radio" style="flex:1 1 100%"><input type="checkbox" id="w-board" checked> firmware.bin</label>
+        <label class="radio" style="flex:1 1 100%"><input type="checkbox" id="w-manifest" checked> manifest (meta.json)</label>
+        <label class="radio" style="flex:1 1 100%"><input type="checkbox" id="w-screen"> screen image and assets</label>
+      </div>
+      <button id="write-card" class="primary" disabled>Write to the card</button>
+      <p class="hint" id="card-note">The browser writes the files into the folder you pick; it cannot format the card.</p>
+    </section>
+
     <section class="card" id="status" hidden>
       <h2>Build status</h2>
       <div class="status-line"><span id="phase" class="mono">idle</span><span id="jobid" class="mono hint"></span></div>
-      <pre id="log" class="log" hidden></pre>
       <a class="ghost small-btn" id="run-link" href="#" hidden>open the run</a>
     </section>
 
@@ -206,6 +218,20 @@ const usable = (f) => f.buildable !== false;
 const priced = (f) => f.cost_source === "measured" && typeof f.flash === "number" && f.flash !== 0;
 const fmt = (n) => Number(n || 0).toLocaleString("en-US");
 const mb = (bytes) => (Number(bytes || 0) / (1024 * 1024)).toFixed(2) + " MiB";
+function setBuildButton(text, state) {
+  const btn = $("build");
+  btn.textContent = text;
+  btn.className = "primary" + (state ? " " + state : "");
+}
+
+function logLine(text) {
+  const box = $("log");
+  box.hidden = false;
+  const stamp = new Date().toLocaleTimeString("en-GB", { hour12: false });
+  box.textContent += stamp + "  " + text + String.fromCharCode(10);
+  box.scrollTop = box.scrollHeight;
+}
+
 const human = (bytes) => {
   const n = Number(bytes || 0);
   return Math.abs(n) >= 1048576 ? fmt(n) + " B · " + mb(n) : fmt(n) + " B";
@@ -505,6 +531,10 @@ async function showResult(meta, tag) {
     else if (fallbackName) { el.href = "https://github.com/" + REPO + "/releases/download/" + meta.tag + "/" + fallbackName; el.hidden = false; }
     else el.hidden = true;
   };
+  app.last = { tag: meta.tag, published: meta.published, files: {} };
+  for (const name of ["firmware.bin", "meta.json", "firmware-bundle.zip", "checksums.txt"]) {
+    if (meta.assets[name]) app.last.files[name] = meta.assets[name].browser_download_url;
+  }
   link($("download"), bin, "firmware.bin");
   link($("manifest"), manifest, "meta.json");
   link($("loglink"), log, "build.log");
@@ -535,6 +565,10 @@ async function startBuild() {
   if (app.mode === "pages") return startPagesBuild(sel);
   $("status").hidden = false;
   $("result").hidden = true;
+  $("log").hidden = false;
+  $("log").textContent = "";
+  setBuildButton("Queued...", "busy");
+  logLine("build queued on this machine");
   $("phase").textContent = "queued";
   $("phase").className = "mono warn";
   $("jobid").textContent = "";
@@ -559,12 +593,12 @@ async function startBuild() {
 }
 
 async function startPagesBuild(sel) {
-  $("status").hidden = false;
   $("result").hidden = true;
-  $("phase").textContent = "asking the builder";
-  $("phase").className = "mono warn";
-  $("jobid").textContent = "";
+  $("log").hidden = false;
+  $("log").textContent = "";
   $("build").disabled = true;
+  setBuildButton("Asking the builder...", "busy");
+  logLine("selection sent: " + sel.on.length + " on, " + sel.off.length + " off, mesh " + sel.mesh);
   try {
     const res = await fetch("../api/build", {
       method: "POST",
@@ -576,45 +610,69 @@ async function startPagesBuild(sel) {
     $("jobid").textContent = data.tag || "";
     if (data.status === "done") {
       $("build").disabled = false;
+      setBuildButton("Already published - download below", "ok");
+      logLine("this exact image already exists (" + data.tag + ")");
       await showRelease(data.tag);
-      $("phase").textContent = "already published";
-      $("phase").className = "mono ok";
       return;
     }
-    $("phase").textContent = "queued on GitHub Actions";
-    pollPages(data.tag);
+    setBuildButton("Queued...", "busy");
+    logLine("queued on GitHub Actions as " + data.tag);
+    if (data.run) logLine("run " + data.run);
+    pollPages(data.tag, data.run);
   } catch (error) {
-    $("phase").textContent = "refused";
-    $("phase").className = "mono bad";
+    setBuildButton("Build firmware", "");
     $("build-note").textContent = "The builder refused the job: " + error.message;
+    logLine("refused: " + error.message);
     $("build").disabled = false;
   }
 }
 
-function pollPages(tag) {
+function pollPages(tag, runId) {
+  const suffix = runId ? "?run=" + encodeURIComponent(runId) : "";
   clearInterval(app.poll);
   const started = Date.now();
+  let lastStep = "";
   app.poll = setInterval(async () => {
     try {
-      const res = await fetch("../api/build/" + tag);
+      const res = await fetch("../api/build/" + tag + suffix);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
-      const seconds = Math.round((Date.now() - started) / 1000);
-      $("phase").textContent = data.status === "done" ? "published" : "compiling (" + seconds + " s)";
-      $("phase").className = "mono " + (data.status === "done" ? "ok" : "warn");
-      if (data.status === "done") {
+      const seconds = data.elapsed || Math.round((Date.now() - started) / 1000);
+
+      if (data.status === "queued") {
+        setBuildButton("In the queue (" + seconds + " s)", "busy");
+      } else if (data.status === "running") {
+        const step = (data.detail || []).find((s) => s.status === "running");
+        const name = step ? step.name : "working";
+        setBuildButton("Compiling: " + name + " (" + seconds + " s)", "busy");
+        if (step && step.name !== lastStep) {
+          lastStep = step.name;
+          logLine("started: " + step.name);
+        }
+        for (const s of data.detail || []) {
+          if (s.status === "success" && s.name !== lastStep) logLine("done: " + s.name);
+        }
+      } else if (data.status === "done") {
         clearInterval(app.poll);
         $("build").disabled = false;
+        setBuildButton("Published - download below", "ok");
+        logLine("published " + tag);
         await showRelease(tag);
+      } else if (data.status === "failed") {
+        clearInterval(app.poll);
+        $("build").disabled = false;
+        setBuildButton("Build failed - see the log", "bad");
+        logLine("failed: " + (data.error || "the workflow ended early"));
+        $("build-note").textContent = data.run ? "The run is at " + data.run : "The run failed.";
       }
+      if (data.run && $("run-link")) { $("run-link").href = data.run; $("run-link").hidden = false; }
     } catch (error) {
       clearInterval(app.poll);
       $("build").disabled = false;
-      $("phase").textContent = "lost contact";
-      $("phase").className = "mono bad";
+      setBuildButton("Status lost - try again", "bad");
       $("build-note").textContent = "Could not read the build status: " + error.message;
     }
-  }, 5000);
+  }, 4000);
 }
 
 async function showRelease(tag) {
@@ -644,6 +702,7 @@ function pollJob(id) {
       if (job.status === "succeeded") {
         clearInterval(app.poll);
         $("build").disabled = false;
+        setBuildButton("Built - download below", "ok");
         showJobResult(id, job);
       } else if (job.status === "failed") {
         clearInterval(app.poll);
@@ -749,6 +808,66 @@ async function boot() {
   }
   await loadCatalog();
 }
+
+let cardHandle = null;
+
+async function pickCard() {
+  if (!window.showDirectoryPicker) {
+    $("card-note").textContent = "This browser cannot write to a folder. Chrome or Edge can.";
+    return;
+  }
+  try {
+    cardHandle = await window.showDirectoryPicker({ mode: "readwrite", id: "sd-card" });
+    $("card-note").textContent = "Will write into: " + cardHandle.name +
+      ". A FAT32 card written by the printer needs the file at its root.";
+    $("write-card").disabled = false;
+  } catch (error) {
+    $("card-note").textContent = "No folder chosen.";
+  }
+}
+
+async function writeCard() {
+  if (!cardHandle) return;
+  const tasks = [];
+  if ($("w-board").checked && app.last) tasks.push(["firmware.bin", app.last.files["firmware.bin"]]);
+  if ($("w-manifest").checked && app.last) tasks.push(["meta.json", app.last.files["meta.json"]]);
+  if ($("w-screen").checked) {
+    const osId = $("screen-os").value, assetId = $("screen-assets").value;
+    const screen = (app.catalog && app.catalog.screen) || { os: [], assets: [] };
+    const osEntry = (screen.os || []).find((x) => x.id === osId);
+    const assetEntry = (screen.assets || []).find((x) => x.id === assetId);
+    if (osEntry) tasks.push([osEntry.path.split("/").pop(), RAW + osEntry.path]);
+    if (assetEntry && assetEntry.path) tasks.push([assetEntry.path.split("/").pop(), RAW + assetEntry.path]);
+  }
+  if (!tasks.length) {
+    $("card-note").textContent = "Nothing selected to write - build an image first.";
+    return;
+  }
+  $("write-card").disabled = true;
+  for (const [name, url] of tasks) {
+    if (!url) continue;
+    $("card-note").textContent = "writing " + name + " ...";
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("HTTP " + response.status);
+      const blob = await response.blob();
+      const handle = await cardHandle.getFileHandle(name, { create: true });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      logLine("wrote " + name + " (" + human(blob.size) + ")");
+    } catch (error) {
+      $("card-note").textContent = "could not write " + name + ": " + error.message;
+      $("write-card").disabled = false;
+      return;
+    }
+  }
+  $("card-note").textContent = "Done. Eject the card before pulling it out.";
+  $("write-card").disabled = false;
+}
+
+$("pick-card").onclick = pickCard;
+$("write-card").onclick = writeCard;
 
 boot();
 </script>
