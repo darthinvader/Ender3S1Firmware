@@ -165,16 +165,20 @@
 
     <section class="card" id="write-panel">
       <h2>Write to card</h2>
+      <p class="hint"><strong>1 - choose the card.</strong> Choosing a folder copies nothing.</p>
       <button id="pick-card" class="ghost small-btn">Choose the SD card</button>
+      <p class="hint" id="card-picked">No folder chosen yet.</p>
+      <p class="hint"><strong>2 - select what to copy.</strong></p>
       <div class="checks">
-        <label class="radio" style="flex:1 1 100%"><input type="checkbox" id="w-board" checked> firmware image</label>
-        <label class="radio" style="flex:1 1 100%"><input type="checkbox" id="w-fresh" checked> fresh filename (the panel ignores a name it has already flashed)</label>
-        <label class="radio" style="flex:1 1 100%"><input type="checkbox" id="w-manifest" checked> manifest (meta.json)</label>
+        <label class="radio" style="flex:1 1 100%"><input type="checkbox" id="w-board" checked> firmware image <span class="hint" id="size-board"></span></label>
+        <label class="radio" style="flex:1 1 100%"><input type="checkbox" id="w-manifest" checked> manifest (meta.json) <span class="hint" id="size-manifest"></span></label>
         <label class="radio" style="flex:1 1 100%"><input type="checkbox" id="w-screen"> screen image and assets</label>
+        <label class="radio" style="flex:1 1 100%"><input type="checkbox" id="w-fresh" checked> fresh filename, so the panel flashes it (turns firmware.bin into firmware-xxxxxx.bin)</label>
       </div>
-      <button id="write-card" class="primary" disabled>Write to the card</button>
+      <p class="hint"><strong>3 - copy.</strong></p>
+      <button id="write-card" class="primary" disabled>Choose a card first</button>
       <a class="ghost" id="card-bundle" href="#" hidden>Download the bundle (.zip)</a>
-      <p class="hint" id="card-note">The browser writes the files into the folder you pick; it cannot format the card.</p>
+      <p class="hint" id="card-note">Nothing is copied until you press the copy button. The browser cannot format the card.</p>
     </section>
 
     <section class="card" id="status" hidden>
@@ -521,7 +525,15 @@ async function fetchRelease(tag) {
   } catch (error) { return null; }
 }
 
-async function showResult(meta, tag) {
+async function showCardSizes(meta) {
+  const assets = (meta && meta.assets) || {};
+  const bytes = (entry) => (entry && typeof entry === "object" ? entry.size : null);
+  const label = (n) => (typeof n === "number" ? " (" + n.toLocaleString("en-US") + " B)" : "");
+  if ($("size-board")) $("size-board").textContent = label(bytes(assets["firmware.bin"]));
+  if ($("size-manifest")) $("size-manifest").textContent = label(bytes(assets["meta.json"]));
+}
+
+function showResult(meta, tag) {
   if (tag && tag !== app.tag) return;
   const bin = meta.assets["firmware.bin"];
   const manifest = meta.assets["meta.json"];
@@ -553,6 +565,7 @@ async function showResult(meta, tag) {
   link($("loglink"), log, "build.log");
   link($("bundle"), bundle, null);
   if ($("card-bundle")) link($("card-bundle"), bundle, null);
+  showCardSizes(meta);
   const sums = $("checksums");
   if (sums) { link(sums, meta.assets["checksums.txt"], "checksums.txt"); }
 }
@@ -856,16 +869,33 @@ async function pickCard() {
   try {
     const picked = await window.showDirectoryPicker({ mode: "readwrite", id: "sd-card" });
     if (cardHandle && picked && picked.name === cardHandle.name) {
-      $("card-note").textContent = "Already using " + cardHandle.name + " - choose Write.";
+      $("card-note").textContent = "Already using " + cardHandle.name + " - press the copy button when ready.";
+      refreshCard();
       return;
     }
     cardHandle = picked;
-    $("card-note").textContent = "Will write into: " + cardHandle.name +
-      ". A FAT32 card written by the printer needs the file at its root.";
-    $("write-card").disabled = false;
+    $("card-note").textContent = "Folder chosen: " + cardHandle.name +
+      ". Nothing copied yet - tick the files, then press the copy button.";
+    refreshCard();
   } catch (error) {
     $("card-note").textContent = "No folder chosen.";
   }
+}
+
+function refreshCard() {
+  const boxes = ["w-board", "w-manifest", "w-screen"];
+  const chosen = boxes.filter((id) => $(id) && $(id).checked);
+  const button = $("write-card");
+  let label;
+  if (app.writing) label = "Copying...";
+  else if (!cardHandle) label = "Choose a card first";
+  else if (!chosen.length) label = "Tick what to copy";
+  else label = "Copy " + chosen.length + " file" + (chosen.length === 1 ? "" : "s") + " to " + cardHandle.name;
+  button.textContent = label;
+  button.disabled = !cardHandle || !chosen.length || !!app.writing;
+  if ($("card-picked")) $("card-picked").textContent = cardHandle
+    ? "Using " + cardHandle.name + "."
+    : "No folder chosen yet - nothing is copied until you press the copy button.";
 }
 
 function freshName(extension) {
@@ -892,11 +922,13 @@ async function writeCard() {
     if (assetEntry && assetEntry.path) tasks.push([assetEntry.path.split("/").pop(), fileUrl({ raw: assetEntry.path })]);
   }
   if (!tasks.length) {
-    $("card-note").textContent = "Nothing selected to write - build an image first.";
+    $("card-note").textContent = "Nothing to copy - build an image first.";
     app.writing = false;
+    refreshCard();
     return;
   }
-  $("write-card").disabled = true;
+  app.writing = true;
+  refreshCard();
   for (const [name, url] of tasks) {
     if (!url) continue;
     $("card-note").textContent = "writing " + name + " ...";
@@ -912,17 +944,21 @@ async function writeCard() {
     } catch (error) {
       $("card-note").textContent = "could not write " + name + " (" + error.message +
         "). The download link below always works as a fallback.";
-      $("write-card").disabled = false;
       app.writing = false;
+      refreshCard();
       return;
     }
   }
-  $("card-note").textContent = "Done - flash " + binaryName + ". Eject the card before pulling it out.";
-  $("write-card").disabled = false;
+  $("card-note").textContent = "Copied. Flash " + binaryName + ", then eject the card before pulling it out.";
   app.writing = false;
+  refreshCard();
 }
 
 $("pick-card").onclick = pickCard;
+for (const id of ["w-board", "w-manifest", "w-screen", "w-fresh"]) {
+  if ($(id)) $(id).onchange = refreshCard;
+}
+refreshCard();
 $("write-card").onclick = writeCard;
 
 boot();
