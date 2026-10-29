@@ -167,7 +167,7 @@ Everything on the page is served from the same process - there is no separate fr
 
 ### From a browser, with nothing installed
 
-The page is static; two Cloudflare Pages functions sit behind it. A press of **Build firmware** dispatches *configurator.yml*, and the answer comes back as a release asset.
+The page is static (index.html, style.css, app.js); three routes in Pages functions sit behind it. A press of **Build firmware** dispatches *configurator.yml*, and the answer comes back as a release asset.
 
 | Step | What happens |
 |---|---|
