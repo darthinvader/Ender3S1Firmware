@@ -167,6 +167,7 @@
         <label class="radio" style="flex:1 1 100%"><input type="checkbox" id="w-screen"> screen image and assets</label>
       </div>
       <button id="write-card" class="primary" disabled>Write to the card</button>
+      <a class="ghost" id="card-bundle" href="#" hidden>Download the bundle (.zip)</a>
       <p class="hint" id="card-note">The browser writes the files into the folder you pick; it cannot format the card.</p>
     </section>
 
@@ -539,6 +540,7 @@ async function showResult(meta, tag) {
   link($("manifest"), manifest, "meta.json");
   link($("loglink"), log, "build.log");
   link($("bundle"), bundle, null);
+  if ($("card-bundle")) link($("card-bundle"), bundle, null);
   const sums = $("checksums");
   if (sums) { link(sums, meta.assets["checksums.txt"], "checksums.txt"); }
 }
@@ -810,10 +812,24 @@ async function boot() {
 }
 
 let cardHandle = null;
+const canWriteFolder = typeof window.showDirectoryPicker === "function";
+
+function initCardWriter() {
+  if (canWriteFolder) return;
+  $("pick-card").disabled = true;
+  $("pick-card").textContent = "This browser cannot write into a folder";
+  $("write-card").hidden = true;
+  $("card-bundle").hidden = false;
+  $("card-note").textContent = "Firefox and Safari do not let a page write into a folder " +
+    "(Chrome and Edge do). Download the bundle and unzip it onto the card instead - " +
+    "the printer only needs firmware.bin at the card's root.";
+}
+
+initCardWriter();
 
 async function pickCard() {
-  if (!window.showDirectoryPicker) {
-    $("card-note").textContent = "This browser cannot write to a folder. Chrome or Edge can.";
+  if (!canWriteFolder) {
+    $("card-note").textContent = "This browser cannot write into a folder; use the bundle download below.";
     return;
   }
   try {
