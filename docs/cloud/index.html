@@ -158,11 +158,12 @@
       </div>
     </section>
 
-    <section class="card" id="write-card">
+    <section class="card" id="write-panel">
       <h2>Write to card</h2>
       <button id="pick-card" class="ghost small-btn">Choose the SD card</button>
       <div class="checks">
-        <label class="radio" style="flex:1 1 100%"><input type="checkbox" id="w-board" checked> firmware.bin</label>
+        <label class="radio" style="flex:1 1 100%"><input type="checkbox" id="w-board" checked> firmware image</label>
+        <label class="radio" style="flex:1 1 100%"><input type="checkbox" id="w-fresh" checked> fresh filename (the panel ignores a name it has already flashed)</label>
         <label class="radio" style="flex:1 1 100%"><input type="checkbox" id="w-manifest" checked> manifest (meta.json)</label>
         <label class="radio" style="flex:1 1 100%"><input type="checkbox" id="w-screen"> screen image and assets</label>
       </div>
@@ -212,7 +213,7 @@ const RAW = "https://raw.githubusercontent.com/" + REPO + "/main/";
 const CATALOG_URL = RAW + "tools/configurator/features.json";
 const FENCE = String.fromCharCode(96).repeat(3);
 const app = { catalog: null, on: new Set(), off: new Set(), mesh: 7, filter: "", collapsed: {},
-              poll: 0, tag: null, job: null, gen: 0, backend: null, mode: null };
+              poll: 0, tag: null, job: null, gen: 0, backend: null, mode: null, writing: false };
 
 const $ = (id) => document.getElementById(id);
 const usable = (f) => f.buildable !== false;
@@ -637,6 +638,7 @@ async function startPagesBuild(sel) {
 
 function pollPages(tag, runId) {
   const suffix = runId ? "?run=" + encodeURIComponent(runId) : "";
+  const announced = new Set();
   clearInterval(app.poll);
   const started = Date.now();
   let lastStep = "";
@@ -655,10 +657,16 @@ function pollPages(tag, runId) {
         setBuildButton("Compiling: " + name + " (" + seconds + " s)", "busy");
         if (step && step.name !== lastStep) {
           lastStep = step.name;
-          logLine("started: " + step.name);
+          if (!announced.has("start:" + step.name)) {
+            announced.add("start:" + step.name);
+            logLine("started: " + step.name);
+          }
         }
         for (const s of data.detail || []) {
-          if (s.status === "success" && s.name !== lastStep) logLine("done: " + s.name);
+          if (s.status !== "success") continue;
+          if (announced.has("done:" + s.name)) continue;
+          announced.add("done:" + s.name);
+          logLine("done: " + s.name);
         }
       } else if (data.status === "done") {
         clearInterval(app.poll);
@@ -841,7 +849,12 @@ async function pickCard() {
     return;
   }
   try {
-    cardHandle = await window.showDirectoryPicker({ mode: "readwrite", id: "sd-card" });
+    const picked = await window.showDirectoryPicker({ mode: "readwrite", id: "sd-card" });
+    if (cardHandle && picked && picked.name === cardHandle.name) {
+      $("card-note").textContent = "Already using " + cardHandle.name + " - choose Write.";
+      return;
+    }
+    cardHandle = picked;
     $("card-note").textContent = "Will write into: " + cardHandle.name +
       ". A FAT32 card written by the printer needs the file at its root.";
     $("write-card").disabled = false;
@@ -850,10 +863,20 @@ async function pickCard() {
   }
 }
 
+function freshName(extension) {
+  const bytes = new Uint8Array(3);
+  crypto.getRandomValues(bytes);
+  const code = Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+  return "firmware-" + code + "." + extension;
+}
+
 async function writeCard() {
   if (!cardHandle) return;
+  if (app.writing) return;
+  app.writing = true;
   const tasks = [];
-  if ($("w-board").checked && app.last) tasks.push(["firmware.bin", fileUrl({ tag: app.last.tag, name: "firmware.bin" })]);
+  const binaryName = $("w-fresh").checked ? freshName("bin") : "firmware.bin";
+  if ($("w-board").checked && app.last) tasks.push([binaryName, fileUrl({ tag: app.last.tag, name: "firmware.bin" })]);
   if ($("w-manifest").checked && app.last) tasks.push(["meta.json", fileUrl({ tag: app.last.tag, name: "meta.json" })]);
   if ($("w-screen").checked) {
     const osId = $("screen-os").value, assetId = $("screen-assets").value;
@@ -865,6 +888,7 @@ async function writeCard() {
   }
   if (!tasks.length) {
     $("card-note").textContent = "Nothing selected to write - build an image first.";
+    app.writing = false;
     return;
   }
   $("write-card").disabled = true;
@@ -884,11 +908,13 @@ async function writeCard() {
       $("card-note").textContent = "could not write " + name + " (" + error.message +
         "). The download link below always works as a fallback.";
       $("write-card").disabled = false;
+      app.writing = false;
       return;
     }
   }
-  $("card-note").textContent = "Done. Eject the card before pulling it out.";
+  $("card-note").textContent = "Done - flash " + binaryName + ". Eject the card before pulling it out.";
   $("write-card").disabled = false;
+  app.writing = false;
 }
 
 $("pick-card").onclick = pickCard;
