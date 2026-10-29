@@ -10,7 +10,7 @@ function.
 |---|---|
 | Site with the working builder | **https://ender3s1-firmware.pages.dev/cloud/** |
 | Cloudflare Pages project | `ender3s1-firmware` (direct upload; the mirror on GitHub Pages stays as a read-only copy) |
-| Function | `POST /api/build` dispatches `configurator.yml`; `GET /api/build/<tag>` answers from the release tag |
+| Functions | POST /api/build dispatches configurator.yml; GET /api/build/&lt;tag&gt; answers from the release tag; GET /api/file streams a release asset (or a screen package with raw=) from the site's own origin, because a browser cannot read a GitHub release asset directly - no CORS headers |
 | Secret | `GH_TOKEN` - fine-grained, Actions read/write + Contents read on this repository |
 | Deploy again | `CLOUDFLARE_API_TOKEN=... GH_TOKEN=... scripts/deploy-cloudflare-pages.sh` |
 
@@ -22,6 +22,12 @@ and the release appeared with `firmware.bin` (232,772 B), `checksums.txt`,
 
 Note: a Pages secret only reaches deployments created **after** it is set - set it,
 then deploy again.
+
+The page writes cards into a folder the visitor picks (Chrome and Edge only, via
+the File System Access API); Firefox and Safari are given the bundle download
+instead. That is a browser limit, not a missing feature: a web page has no access
+to block devices, so it cannot list disks or format a card the way the local
+service does.
 
 ## The one that needs no card at all: GitHub Actions + Cloudflare Pages Functions
 

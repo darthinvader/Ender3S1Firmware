@@ -163,7 +163,33 @@ Everything on the page is served from the same process - there is no separate fr
 
 ## Configurator (optional)
 
-**Build one online:** [darthinvader.github.io/Ender3S1Firmware/cloud](https://darthinvader.github.io/Ender3S1Firmware/cloud/) - switch features off, request the build, download the image. No server, no account, no bill; the workflow in this repository does the compiling and publishes each selection as a release.
+**Build one online:** [ender3s1-firmware.pages.dev/cloud](https://ender3s1-firmware.pages.dev/cloud/) - switch features off, request the build, download the image. No server, no account, no bill; the workflow in this repository does the compiling and publishes each selection as a release.
+
+### From a browser, with nothing installed
+
+The page is static; two Cloudflare Pages functions sit behind it. A press of **Build firmware** dispatches *configurator.yml*, and the answer comes back as a release asset.
+
+| Step | What happens |
+|---|---|
+| Pick | tick features, a preset, the mesh size - the flash budget moves as you tick, because every price is measured |
+| Build | the button itself carries the state: **In the queue (12 s)** then **Compiling: compiling (48 s)** then **Published - download below**. Under it a small terminal lists the workflow steps as the runner reaches them, one line per transition |
+| Take it | result card with the .bin, the manifest, the bundle, the build log and the checksums |
+
+A selection that was built before is served from its release immediately: the tag is a hash of the selection, so the same choices always name the same image.
+
+**Writing the card.** Three steps, and nothing is copied until the copy button is pressed:
+
+1. *Choose the SD card* - a folder picker. Choosing a folder copies nothing.
+2. *Select what to copy* - firmware image (with its size), manifest, screen image and assets.
+3. *Copy* - the button says what it will do (**Copy 2 files to SDCARD**) and the page reports each file as it lands.
+
+The image is written as firmware-xxxxxx.bin, a fresh name every time, because the panel ignores a firmware.bin it has already flashed. Folder writing needs Chrome or Edge (the File System Access API); Firefox and Safari get **Download the bundle (.zip)** instead - the same files in one archive. The page copies files onto a FAT32 card; it cannot format one.
+
+| Route | Answers |
+|---|---|
+| POST /api/build | validates the selection, serves it from a release when the tag exists, otherwise dispatches the workflow and returns the run id |
+| GET /api/build/&lt;tag&gt; | queued or running with the steps the runner has reached, or done with the asset list |
+| GET /api/file | streams a release asset from the site's own origin, because browsers cannot read GitHub release assets (no CORS); with raw=screen/... it serves the screen packages |
 
 It also runs locally in one command; if you want it on a server, [docs/HOSTING.md](docs/HOSTING.md) has the measured requirements and free-forever options ([deploy/](deploy) has the Docker image, compose file, systemd unit and tunnel config).
 
