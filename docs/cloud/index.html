@@ -219,6 +219,12 @@ const usable = (f) => f.buildable !== false;
 const priced = (f) => f.cost_source === "measured" && typeof f.flash === "number" && f.flash !== 0;
 const fmt = (n) => Number(n || 0).toLocaleString("en-US");
 const mb = (bytes) => (Number(bytes || 0) / (1024 * 1024)).toFixed(2) + " MiB";
+function fileUrl(params) {
+  const url = new URL("../api/file", location.href);
+  for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
+  return url.toString();
+}
+
 function setBuildButton(text, state) {
   const btn = $("build");
   btn.textContent = text;
@@ -847,15 +853,15 @@ async function pickCard() {
 async function writeCard() {
   if (!cardHandle) return;
   const tasks = [];
-  if ($("w-board").checked && app.last) tasks.push(["firmware.bin", app.last.files["firmware.bin"]]);
-  if ($("w-manifest").checked && app.last) tasks.push(["meta.json", app.last.files["meta.json"]]);
+  if ($("w-board").checked && app.last) tasks.push(["firmware.bin", fileUrl({ tag: app.last.tag, name: "firmware.bin" })]);
+  if ($("w-manifest").checked && app.last) tasks.push(["meta.json", fileUrl({ tag: app.last.tag, name: "meta.json" })]);
   if ($("w-screen").checked) {
     const osId = $("screen-os").value, assetId = $("screen-assets").value;
     const screen = (app.catalog && app.catalog.screen) || { os: [], assets: [] };
     const osEntry = (screen.os || []).find((x) => x.id === osId);
     const assetEntry = (screen.assets || []).find((x) => x.id === assetId);
-    if (osEntry) tasks.push([osEntry.path.split("/").pop(), RAW + osEntry.path]);
-    if (assetEntry && assetEntry.path) tasks.push([assetEntry.path.split("/").pop(), RAW + assetEntry.path]);
+    if (osEntry) tasks.push([osEntry.path.split("/").pop(), fileUrl({ raw: osEntry.path })]);
+    if (assetEntry && assetEntry.path) tasks.push([assetEntry.path.split("/").pop(), fileUrl({ raw: assetEntry.path })]);
   }
   if (!tasks.length) {
     $("card-note").textContent = "Nothing selected to write - build an image first.";
@@ -875,7 +881,8 @@ async function writeCard() {
       await writable.close();
       logLine("wrote " + name + " (" + human(blob.size) + ")");
     } catch (error) {
-      $("card-note").textContent = "could not write " + name + ": " + error.message;
+      $("card-note").textContent = "could not write " + name + " (" + error.message +
+        "). The download link below always works as a fallback.";
       $("write-card").disabled = false;
       return;
     }
